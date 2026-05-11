@@ -9,7 +9,13 @@ class Settings(BaseSettings):
 
     database_url: str = Field(
         default="postgresql+psycopg2://smocp:smocp@localhost:5432/smocp",
-        validation_alias=AliasChoices("DATABASE_URL", "SUPABASE_DATABASE_URL", "SUPABASE_DB_URL"),
+        validation_alias=AliasChoices(
+            "DATABASE_URL",
+            "SUPABASE_DATABASE_URL",
+            "SUPABASE_DB_URL",
+            "POSTGRES_URL",
+            "POSTGRES_PRISMA_URL",
+        ),
     )
     secret_key: str = "change-me-to-a-long-random-secret"
     access_token_expire_minutes: int = 30
