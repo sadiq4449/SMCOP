@@ -1,8 +1,8 @@
 import os
 from collections.abc import Generator
-from urllib.parse import urlparse
 
 from sqlalchemy import create_engine
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -10,22 +10,25 @@ from app.core.config import get_settings
 
 
 def _normalize_database_url(url: str) -> str:
-    if url.startswith("sqlite"):
+    url = url.strip()
+    if not url or url.startswith("sqlite"):
         return url
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url.removeprefix("postgres://")
-    if url.startswith("postgresql://"):
-        url = "postgresql+psycopg2://" + url.removeprefix("postgresql://")
-    if "supabase" in url.lower() and "sslmode" not in url:
-        url = f"{url}{'&' if '?' in url else '?'}sslmode=require"
-    return url
+    u = make_url(url)
+    host = (u.host or "").lower()
+    if "supabase" in host and "sslmode" not in u.query:
+        u = u.update_query_dict({"sslmode": "require"})
+    if u.drivername != "postgresql+psycopg2":
+        u = u.set(drivername="postgresql+psycopg2")
+    return u.render_as_string(hide_password=False)
 
 
 def _connect_args(url: str) -> dict:
     if url.startswith("sqlite"):
         return {"check_same_thread": False}
-    bare = url.replace("postgresql+psycopg2://", "http://", 1)
-    host = (urlparse(bare).hostname or "").lower()
+    u = make_url(url)
+    if "sslmode" in u.query:
+        return {}
+    host = (u.host or "").lower()
     if "supabase" in host:
         return {"sslmode": "require"}
     return {}

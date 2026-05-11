@@ -26,6 +26,16 @@ class Settings(BaseSettings):
     seed_demo_users: bool = True
     jwt_algorithm: str = "HS256"
 
+    @field_validator("database_url", mode="before")
+    @classmethod
+    def _strip_database_url(cls, v: object) -> object:
+        if isinstance(v, str):
+            s = v.strip()
+            if "\n" in s or "\r" in s:
+                s = s.split()[0]
+            return s
+        return v
+
     @field_validator("seed_demo_users", mode="before")
     @classmethod
     def _coerce_bool(cls, v: object) -> object:
