@@ -1,7 +1,10 @@
-from fastapi import FastAPI, Request
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
@@ -11,7 +14,22 @@ from app.db.seed import seed_demo_users
 from app.db.seed_geo import seed_geography_and_partner
 from app.models import Base
 
+
+def _frontend_dist_dir() -> Path | None:
+    here = Path(__file__).resolve()
+    candidates = (
+        here.parent.parent.parent / "frontend" / "dist",
+        Path.cwd() / "frontend" / "dist",
+        Path.cwd().parent / "frontend" / "dist",
+    )
+    for dist in candidates:
+        if dist.is_dir() and (dist / "index.html").is_file():
+            return dist.resolve()
+    return None
+
+
 settings = get_settings()
+frontend_dist = _frontend_dist_dir()
 
 app = FastAPI(title="SMOCP API", version="0.1.0")
 
@@ -75,3 +93,25 @@ def health() -> dict[str, str]:
 
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
+
+if frontend_dist is not None:
+    assets_dir = frontend_dist / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="vite_assets")
+
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def spa_catch_all(full_path: str):
+    """Serve the Vite SPA from the same origin (single Vercel deployment)."""
+    if frontend_dist is None:
+        raise HTTPException(status_code=404, detail="Frontend bundle not found")
+    if full_path.startswith("api"):
+        raise HTTPException(status_code=404, detail="Not found")
+    try:
+        resolved = (frontend_dist / full_path).resolve()
+        resolved.relative_to(frontend_dist)
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Not found") from None
+    if resolved.is_file():
+        return FileResponse(resolved)
+    return FileResponse(frontend_dist / "index.html")
