@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import AliasChoices, Field
+from pydantic import AliasChoices, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,6 +25,13 @@ class Settings(BaseSettings):
     environment: str = "development"
     seed_demo_users: bool = True
     jwt_algorithm: str = "HS256"
+
+    @field_validator("seed_demo_users", mode="before")
+    @classmethod
+    def _coerce_bool(cls, v: object) -> object:
+        if isinstance(v, str):
+            return v.strip().lower() in ("1", "true", "yes", "on")
+        return v
 
     @property
     def cors_origin_list(self) -> list[str]:
