@@ -16,7 +16,7 @@ def _normalize_database_url(url: str) -> str:
         url = "postgresql://" + url.removeprefix("postgres://")
     if url.startswith("postgresql://"):
         url = "postgresql+psycopg2://" + url.removeprefix("postgresql://")
-    if "supabase.co" in url and "sslmode" not in url:
+    if "supabase" in url.lower() and "sslmode" not in url:
         url = f"{url}{'&' if '?' in url else '?'}sslmode=require"
     return url
 
@@ -25,8 +25,8 @@ def _connect_args(url: str) -> dict:
     if url.startswith("sqlite"):
         return {"check_same_thread": False}
     bare = url.replace("postgresql+psycopg2://", "http://", 1)
-    host = urlparse(bare).hostname or ""
-    if "supabase.co" in host:
+    host = (urlparse(bare).hostname or "").lower()
+    if "supabase" in host:
         return {"sslmode": "require"}
     return {}
 
