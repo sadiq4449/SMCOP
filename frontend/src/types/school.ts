@@ -1,5 +1,3 @@
-import type { ApiResponse } from '../types/auth'
-
 export interface District {
   id: string
   name: string
