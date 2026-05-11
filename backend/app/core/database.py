@@ -8,6 +8,30 @@ from sqlalchemy.pool import NullPool
 
 from app.core.config import get_settings
 
+# Query params on pooled/Prisma URLs (e.g. pgbouncer, schema) are not libpq keywords;
+# passing them to psycopg2 causes "invalid connection option".
+_LIBPQ_QUERY_ALLOW = frozenset({
+    "application_name",
+    "channel_binding",
+    "connect_timeout",
+    "gssencmode",
+    "gsslib",
+    "host",
+    "krbsrvname",
+    "load_balance_hosts",
+    "options",
+    "port",
+    "service",
+    "sslcert",
+    "sslcrl",
+    "sslkey",
+    "ssl_max_protocol_version",
+    "ssl_min_protocol_version",
+    "sslmode",
+    "sslrootcert",
+    "target_session_attrs",
+})
+
 
 def _normalize_database_url(url: str) -> str:
     url = url.strip()
@@ -17,6 +41,8 @@ def _normalize_database_url(url: str) -> str:
     host = (u.host or "").lower()
     if "supabase" in host and "sslmode" not in u.query:
         u = u.update_query_dict({"sslmode": "require"})
+    allowed_q = {k: v for k, v in u.query.items() if k in _LIBPQ_QUERY_ALLOW}
+    u = u.set(query=allowed_q)
     if u.drivername != "postgresql+psycopg2":
         u = u.set(drivername="postgresql+psycopg2")
     return u.render_as_string(hide_password=False)
