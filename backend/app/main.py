@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
@@ -84,15 +85,32 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """Return JSON so clients (and axios) can show message instead of falling back to generic errors."""
     logger.exception("%s %s", request.method, request.url.path)
+
+    if isinstance(exc, ProgrammingError):
+        message = (
+            "Database tables are missing. In Supabase → SQL Editor, run "
+            "supabase/000_schema_from_alembic.sql (see supabase/README.txt), then redeploy or wait for a cold start "
+            "so demo users can seed."
+        )
+        code = "database_schema"
+    elif isinstance(exc, OperationalError):
+        message = (
+            "Cannot reach the database. Verify Postgres env vars on Vercel and that Supabase allows connections "
+            "(pooler URI, SSL)."
+        )
+        code = "database_connection"
+    else:
+        message = (
+            "Server error. On Vercel, set DATABASE_URL / POSTGRES_URL and apply migrations (see supabase/README.txt)."
+        )
+        code = type(exc).__name__
+
     return JSONResponse(
         status_code=500,
         content={
             "success": False,
-            "message": (
-                "Server error. On Vercel, set DATABASE_URL to your Postgres URI and apply migrations "
-                "(see supabase/README.txt)."
-            ),
-            "errors": {"exception": type(exc).__name__},
+            "message": message,
+            "errors": {"code": code},
         },
     )
 
