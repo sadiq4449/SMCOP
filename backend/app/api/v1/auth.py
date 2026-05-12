@@ -31,6 +31,7 @@ def _serialize_user(user: User) -> UserPublic:
         status=user.status.value,
         partner_org_id=str(user.partner_org_id) if user.partner_org_id else None,
         district_id=str(user.district_id) if user.district_id else None,
+        linked_teacher_id=str(user.linked_teacher_id) if user.linked_teacher_id else None,
         assigned_schools=schools,
     )
 

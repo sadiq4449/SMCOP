@@ -43,6 +43,12 @@ class User(Base):
         nullable=True,
         index=True,
     )
+    linked_teacher_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("teachers.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     assigned_schools: Mapped[list[str]] = mapped_column(
         JSON,
         nullable=False,

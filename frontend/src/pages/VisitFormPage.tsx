@@ -12,6 +12,10 @@ import {
   submitVisitKpis,
   uploadVisitEvidence,
 } from '../services/visitsApi'
+import { createObservation, listObservations, uploadObservationEvidence } from '../services/observationsApi'
+import { getTeachers } from '../services/schoolsApi'
+import type { ClassroomObservation } from '../types/observation'
+import type { TeacherRow } from '../types/school'
 import type { KPIRow, VisitDetail } from '../types/visit'
 
 const INFRA_PRESETS = [
@@ -42,6 +46,16 @@ export function VisitFormPage() {
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const [observations, setObservations] = useState<ClassroomObservation[]>([])
+  const [schoolTeachers, setSchoolTeachers] = useState<TeacherRow[]>([])
+  const [obsTeacherId, setObsTeacherId] = useState('')
+  const [obsTeacherName, setObsTeacherName] = useState('')
+  const [obsSubject, setObsSubject] = useState('General')
+  const [obsGrade, setObsGrade] = useState('4')
+  const [obsEng, setObsEng] = useState(3)
+  const [obsPed, setObsPed] = useState(3)
+  const [obsEnv, setObsEnv] = useState(3)
 
   const schoolIdParam = searchParams.get('schoolId') ?? ''
 
@@ -103,6 +117,30 @@ export function VisitFormPage() {
     }
   }, [isNew, visitId])
 
+  useEffect(() => {
+    if (!visit?.id) return
+    let cancelled = false
+    void Promise.all([
+      listObservations({ visit_id: visit.id, limit: 50 }).then((r) => {
+        if (!cancelled) setObservations(r.items)
+      }),
+      getTeachers(visit.school_id).then((rows) => {
+        if (!cancelled) setSchoolTeachers(rows)
+      }),
+    ]).catch(() => {
+      if (!cancelled) setError('Could not load classroom observations or teachers')
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [visit?.id, visit?.school_id])
+
+  const refreshObservations = async () => {
+    if (!visit?.id) return
+    const res = await listObservations({ visit_id: visit.id, limit: 50 })
+    setObservations(res.items)
+  }
+
   const handleCreate = async () => {
     if (!schoolIdParam) {
       setError('Missing schoolId — open from Assigned schools.')
@@ -121,6 +159,48 @@ export function VisitFormPage() {
       setError(e instanceof Error ? e.message : 'Create failed')
     } finally {
       setCreating(false)
+    }
+  }
+
+  const saveObservation = async () => {
+    if (!visit || isNew) return
+    setSaving(true)
+    setError(null)
+    try {
+      await createObservation({
+        visit_id: visit.id,
+        teacher_id: obsTeacherId || null,
+        teacher_name: obsTeacherName.trim() || null,
+        subject: obsSubject.trim(),
+        grade: obsGrade.trim(),
+        observation_date: visitDate || null,
+        score_engagement: obsEng,
+        score_pedagogy: obsPed,
+        score_environment: obsEnv,
+      })
+      await refreshObservations()
+      setObsTeacherName('')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Observation save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const onObservationUpload = async (observationId: string, e: FormEvent<HTMLInputElement>) => {
+    const input = e.currentTarget
+    const file = input.files?.[0]
+    if (!file || !visit) return
+    setSaving(true)
+    setError(null)
+    try {
+      await uploadObservationEvidence(observationId, file)
+      await refreshObservations()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Observation upload failed')
+    } finally {
+      setSaving(false)
+      input.value = ''
     }
   }
 
@@ -446,6 +526,130 @@ export function VisitFormPage() {
                 Save KPI scores
               </button>
             ) : null}
+          </section>
+
+          <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
+            <h2 className="text-lg font-semibold text-text-primary">Classroom observations</h2>
+            <p className="text-sm text-text-muted">Tied to this visit; photos attach per observation. DEOs may add reviewer comments from API.</p>
+            {canEdit ? (
+              <div className="grid gap-3 md:grid-cols-2">
+                <label className="block text-sm md:col-span-2">
+                  <span className="mb-1 block font-medium text-text-secondary">Teacher record</span>
+                  <select
+                    value={obsTeacherId}
+                    onChange={(e) => setObsTeacherId(e.target.value)}
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                  >
+                    <option value="">Select teacher…</option>
+                    {schoolTeachers.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-sm md:col-span-2">
+                  <span className="mb-1 block font-medium text-text-secondary">Or teacher name fallback</span>
+                  <input
+                    value={obsTeacherName}
+                    onChange={(e) => setObsTeacherName(e.target.value)}
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                    placeholder="If no dropdown selection"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-text-secondary">Subject</span>
+                  <input value={obsSubject} onChange={(e) => setObsSubject(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-text-secondary">Grade</span>
+                  <input value={obsGrade} onChange={(e) => setObsGrade(e.target.value)} className="w-full rounded-lg border px-3 py-2 text-sm" />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-text-secondary">Engagement (1–5)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={obsEng}
+                    onChange={(e) => setObsEng(Number(e.target.value))}
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="block text-sm">
+                  <span className="mb-1 block font-medium text-text-secondary">Pedagogy (1–5)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={obsPed}
+                    onChange={(e) => setObsPed(Number(e.target.value))}
+                    className="w-full rounded-lg border px-3 py-2 text-sm"
+                  />
+                </label>
+                <label className="block text-sm md:col-span-2">
+                  <span className="mb-1 block font-medium text-text-secondary">Environment (1–5)</span>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={obsEnv}
+                    onChange={(e) => setObsEnv(Number(e.target.value))}
+                    className="w-full rounded-lg border px-3 py-2 text-sm md:w-40"
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => void saveObservation()}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary md:col-span-2"
+                >
+                  Add observation
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-text-muted">Read-only observations list below.</p>
+            )}
+            <div className="space-y-3">
+              {observations.map((o) => (
+                <div key={o.id} className="rounded-lg border border-muted-surface bg-section/50 p-3 text-sm">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <p className="font-medium text-text-primary">
+                      {o.subject} · grade {o.grade} · {o.teacher_name ?? 'Teacher'}
+                    </p>
+                    <span className="text-xs text-text-muted">
+                      scores {o.score_engagement}/{o.score_pedagogy}/{o.score_environment}
+                    </span>
+                  </div>
+                  {canEdit ? (
+                    <label className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-1 text-xs font-semibold hover:bg-section">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => void onObservationUpload(o.id, e)}
+                      />
+                      Observation photo
+                    </label>
+                  ) : null}
+                  <ul className="mt-2 space-y-1 text-xs">
+                    {o.documents.map((d) => (
+                      <li key={d.id} className="flex justify-between gap-2">
+                        <span>{d.file_name}</span>
+                        <button
+                          type="button"
+                          className="font-semibold text-secondary hover:text-primary"
+                          onClick={() => void handleDownload(d.id, d.file_name)}
+                        >
+                          Download
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+              {observations.length === 0 ? <p className="text-xs text-text-muted">No observations for this visit.</p> : null}
+            </div>
           </section>
 
           <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">

@@ -7,9 +7,10 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.config import get_settings
 from app.core.database import get_db
-from app.models.monitoring import EvidenceDocument, Visit
+from app.models.monitoring import ClassroomObservation, EvidenceDocument, Visit
 from app.models.user import User
 from app.services.evidence_storage import resolve_under_root
+from app.services.observation_access import can_read_observation
 from app.services.visit_access import can_read_visit
 
 router = APIRouter(tags=["documents"])
@@ -22,7 +23,7 @@ def download_document(
     db: Session = Depends(get_db),
 ) -> FileResponse:
     doc = db.get(EvidenceDocument, document_id)
-    if not doc or doc.visit_id is None:
+    if not doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
@@ -32,8 +33,18 @@ def download_document(
             },
         )
 
-    visit = db.get(Visit, doc.visit_id)
-    if not visit or not can_read_visit(db, current_user, visit):
+    allowed = False
+    if doc.visit_id is not None:
+        visit = db.get(Visit, doc.visit_id)
+        if visit and can_read_visit(db, current_user, visit):
+            allowed = True
+
+    if not allowed and doc.classroom_observation_id is not None:
+        observation = db.get(ClassroomObservation, doc.classroom_observation_id)
+        if observation and can_read_observation(db, current_user, observation):
+            allowed = True
+
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={

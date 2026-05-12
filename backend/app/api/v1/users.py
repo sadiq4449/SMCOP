@@ -10,7 +10,7 @@ from app.core.security import hash_password
 from app.middleware.rbac import role_required
 from app.models.geography import District
 from app.models.partner_org import PartnerOrg
-from app.models.school import School
+from app.models.school import School, Teacher
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.common import APIResponse
 from app.schemas.user_admin import PaginatedUsers, UserAdminOut, UserCreate, UserUpdate
@@ -38,6 +38,48 @@ def _school_ids_from_strings(raw: list[str]) -> list[UUID]:
     return out
 
 
+def _validate_linked_teacher(db: Session, role: UserRole, school_ids: list[UUID], linked_teacher_id: UUID | None) -> None:
+    if linked_teacher_id is None:
+        return
+    if role != UserRole.TEACHER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "linked_teacher_id is only valid for teacher accounts",
+                "errors": {"linked_teacher_id": "invalid_role"},
+            },
+        )
+    if not school_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "Teacher accounts need assigned_schools before linking a teacher profile",
+                "errors": {"assigned_schools": "required"},
+            },
+        )
+    t = db.get(Teacher, linked_teacher_id)
+    if not t:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "Teacher record not found",
+                "errors": {"linked_teacher_id": "invalid"},
+            },
+        )
+    if school_ids and t.school_id not in school_ids:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "linked teacher must belong to one of assigned_schools",
+                "errors": {"linked_teacher_id": "school_mismatch"},
+            },
+        )
+
+
 def _user_out(user: User) -> UserAdminOut:
     raw_schools = user.assigned_schools if isinstance(user.assigned_schools, list) else []
     schools = [str(x) for x in raw_schools]
@@ -49,6 +91,7 @@ def _user_out(user: User) -> UserAdminOut:
         status=user.status.value,
         partner_org_id=str(user.partner_org_id) if user.partner_org_id else None,
         district_id=str(user.district_id) if user.district_id else None,
+        linked_teacher_id=str(user.linked_teacher_id) if user.linked_teacher_id else None,
         assigned_schools=schools,
         created_at=user.created_at,
         updated_at=user.updated_at,
@@ -184,6 +227,11 @@ def create_user(payload: UserCreate, admin: SuperAdmin, db: Session = Depends(ge
     else:
         school_ids = []
 
+    linked_uuid = UUID(payload.linked_teacher_id) if payload.linked_teacher_id else None
+    if payload.role != UserRole.TEACHER:
+        linked_uuid = None
+    _validate_linked_teacher(db, payload.role, school_ids, linked_uuid)
+
     user = User(
         full_name=payload.full_name.strip(),
         email=email_norm,
@@ -192,6 +240,7 @@ def create_user(payload: UserCreate, admin: SuperAdmin, db: Session = Depends(ge
         status=payload.status,
         partner_org_id=partner_uuid,
         district_id=district_uuid,
+        linked_teacher_id=linked_uuid,
         assigned_schools=[str(sid) for sid in school_ids],
     )
     db.add(user)
@@ -309,6 +358,20 @@ def update_user(
         prev = str(user.district_id)
         user.district_id = None
         changes["district_scope_cleared"] = {"reason": "role_not_deo", "previous_district_id": prev}
+
+    if user.role != UserRole.TEACHER:
+        if user.linked_teacher_id is not None:
+            user.linked_teacher_id = None
+            changes["linked_teacher_id_cleared_for_role"] = True
+    elif "linked_teacher_id" in data:
+        raw_lt = data["linked_teacher_id"]
+        lt_uuid = UUID(raw_lt) if raw_lt else None
+        sch_ids = _school_ids_from_strings([str(x) for x in (user.assigned_schools or [])])
+        _validate_linked_teacher(db, UserRole.TEACHER, sch_ids, lt_uuid)
+        user.linked_teacher_id = lt_uuid
+    elif user.linked_teacher_id is not None:
+        sch_ids = _school_ids_from_strings([str(x) for x in (user.assigned_schools or [])])
+        _validate_linked_teacher(db, UserRole.TEACHER, sch_ids, user.linked_teacher_id)
 
     db.commit()
     db.refresh(user)

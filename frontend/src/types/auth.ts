@@ -14,6 +14,7 @@ export interface UserProfile {
   status: string
   partner_org_id?: string | null
   district_id?: string | null
+  linked_teacher_id?: string | null
   assigned_schools?: string[]
 }
 

@@ -38,6 +38,7 @@ export function UserFormPage() {
   const [status, setStatus] = useState('active')
   const [partnerOrgId, setPartnerOrgId] = useState('')
   const [districtId, setDistrictId] = useState('')
+  const [linkedTeacherId, setLinkedTeacherId] = useState('')
   const [assignedSchoolIds, setAssignedSchoolIds] = useState<Set<string>>(() => new Set())
 
   const [loading, setLoading] = useState(isEdit)
@@ -87,6 +88,7 @@ export function UserFormPage() {
         setStatus(u.status)
         setPartnerOrgId(u.partner_org_id ?? '')
         setDistrictId(u.district_id ?? '')
+        setLinkedTeacherId(u.linked_teacher_id ?? '')
         setAssignedSchoolIds(new Set(u.assigned_schools))
       })
       .catch(() => setError('Could not load user'))
@@ -135,12 +137,18 @@ export function UserFormPage() {
       body.password = password
       body.district_id = showDistrict && districtId ? districtId : null
       body.assigned_schools = showSchoolPicker ? [...assignedSchoolIds] : []
+      if (role === 'teacher') {
+        body.linked_teacher_id = linkedTeacherId.trim() || null
+      }
     } else {
       if (showDistrict) {
         body.district_id = districtId || null
       }
       if (showSchoolPicker) {
         body.assigned_schools = [...assignedSchoolIds]
+      }
+      if (role === 'teacher') {
+        body.linked_teacher_id = linkedTeacherId.trim() || null
       }
       if (password.trim()) {
         body.password = password.trim()
@@ -287,6 +295,20 @@ export function UserFormPage() {
                   </option>
                 ))}
               </select>
+            </label>
+          ) : null}
+
+          {role === 'teacher' ? (
+            <label className="block text-sm md:col-span-2">
+              <span className="mb-1 block font-medium text-text-secondary">
+                Linked teacher profile UUID (optional — required for self-service attendance)
+              </span>
+              <input
+                value={linkedTeacherId}
+                onChange={(e) => setLinkedTeacherId(e.target.value)}
+                placeholder="Teacher row UUID from the school profile"
+                className="w-full rounded-lg border border-muted-surface px-3 py-2 font-mono text-sm text-text-primary"
+              />
             </label>
           ) : null}
 

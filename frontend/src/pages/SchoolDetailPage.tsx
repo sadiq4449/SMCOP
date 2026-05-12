@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { listObservations } from '../services/observationsApi'
 import {
   createEnrollment,
   createTeacher,
@@ -12,6 +13,8 @@ import {
   getSchool,
   getTeachers,
 } from '../services/schoolsApi'
+import { downloadDocument } from '../services/visitsApi'
+import type { ClassroomObservation } from '../types/observation'
 import type { EnrollmentRow, SchoolDetail, TeacherRow } from '../types/school'
 
 export function SchoolDetailPage() {
@@ -26,6 +29,7 @@ export function SchoolDetailPage() {
   const [school, setSchool] = useState<SchoolDetail | null>(null)
   const [enrollment, setEnrollment] = useState<EnrollmentRow[]>([])
   const [teachers, setTeachers] = useState<TeacherRow[]>([])
+  const [observations, setObservations] = useState<ClassroomObservation[]>([])
 
   const [qQuarter, setQQuarter] = useState('Q2-2026')
   const [qBoys, setQBoys] = useState(0)
@@ -52,6 +56,21 @@ export function SchoolDetailPage() {
 
   useEffect(() => {
     void loadAll()
+  }, [schoolId])
+
+  useEffect(() => {
+    if (!schoolId) return
+    let cancelled = false
+    void listObservations({ school_id: schoolId, limit: 50 })
+      .then((r) => {
+        if (!cancelled) setObservations(r.items)
+      })
+      .catch(() => {
+        if (!cancelled) setObservations([])
+      })
+    return () => {
+      cancelled = true
+    }
   }, [schoolId])
 
   const handleDeleteSchool = async () => {
@@ -100,6 +119,20 @@ export function SchoolDetailPage() {
       await loadAll()
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Delete failed')
+    }
+  }
+
+  const handleDownloadObs = async (docId: string, filename: string) => {
+    try {
+      const blob = await downloadDocument(docId)
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      alert('Download failed')
     }
   }
 
@@ -276,6 +309,53 @@ export function SchoolDetailPage() {
             </tbody>
           </table>
         </div>
+      </section>
+
+      <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold text-text-primary">Classroom observations</h2>
+            <p className="mt-1 text-xs text-text-muted">Latest observations captured during monitoring visits for this school.</p>
+          </div>
+          {(user?.role === 'enumerator' || user?.role === 'deo') && schoolId ? (
+            <Link to="/dashboard/observations" className="text-sm font-semibold text-secondary hover:text-primary">
+              Full list →
+            </Link>
+          ) : null}
+        </div>
+        <ul className="mt-4 space-y-3">
+          {observations.map((o) => (
+            <li key={o.id} className="rounded-lg border border-muted-surface bg-section/40 px-3 py-2 text-sm">
+              <div className="flex flex-wrap justify-between gap-2">
+                <p className="font-medium text-text-primary">
+                  {o.subject} · grade {o.grade} · quarter {o.quarter}
+                </p>
+                <Link to={`/dashboard/monitoring/${o.visit_id}`} className="text-xs font-semibold text-secondary hover:text-primary">
+                  Visit
+                </Link>
+              </div>
+              <p className="text-xs text-text-muted">Teacher {o.teacher_name ?? o.teacher_id ?? '—'}</p>
+              <p className="text-xs text-text-secondary mt-1">
+                Rubric {o.score_engagement}/{o.score_pedagogy}/{o.score_environment}
+              </p>
+              <ul className="mt-2 space-y-1 text-xs">
+                {o.documents.map((d) => (
+                  <li key={d.id} className="flex justify-between gap-2">
+                    <span>{d.file_name}</span>
+                    <button
+                      type="button"
+                      className="font-semibold text-secondary hover:text-primary"
+                      onClick={() => void handleDownloadObs(d.id, d.file_name)}
+                    >
+                      Download
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+          {observations.length === 0 ? <li className="text-sm text-text-muted">No observations visible yet.</li> : null}
+        </ul>
       </section>
 
       <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">

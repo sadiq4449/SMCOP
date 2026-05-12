@@ -8,6 +8,7 @@ export interface UserAdminRow {
   status: string
   partner_org_id: string | null
   district_id: string | null
+  linked_teacher_id?: string | null
   assigned_schools: string[]
   created_at: string
   updated_at: string

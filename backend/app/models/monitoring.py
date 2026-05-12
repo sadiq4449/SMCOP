@@ -76,6 +76,10 @@ class Visit(Base):
         back_populates="visit",
         cascade="all, delete-orphan",
     )
+    classroom_observations: Mapped[list["ClassroomObservation"]] = relationship(
+        back_populates="visit",
+        cascade="all, delete-orphan",
+    )
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -140,6 +144,51 @@ class InfrastructureChecklistItem(Base):
     visit: Mapped["Visit"] = relationship(back_populates="infrastructure_items")
 
 
+class ClassroomObservation(Base):
+    __tablename__ = "classroom_observations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    visit_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("visits.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    teacher_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("teachers.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    teacher_name: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    subject: Mapped[str] = mapped_column(String(120), nullable=False)
+    grade: Mapped[str] = mapped_column(String(50), nullable=False)
+    observation_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    score_engagement: Mapped[int] = mapped_column(Integer, nullable=False)
+    score_pedagogy: Mapped[int] = mapped_column(Integer, nullable=False)
+    score_environment: Mapped[int] = mapped_column(Integer, nullable=False)
+    strengths: Mapped[str | None] = mapped_column(Text, nullable=True)
+    weaknesses: Mapped[str | None] = mapped_column(Text, nullable=True)
+    recommendations: Mapped[str | None] = mapped_column(Text, nullable=True)
+    remarks: Mapped[str | None] = mapped_column(Text, nullable=True)
+    reviewer_comments: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    visit: Mapped["Visit"] = relationship(back_populates="classroom_observations")
+    teacher: Mapped["Teacher | None"] = relationship(back_populates="classroom_observations")
+    documents: Mapped[list["EvidenceDocument"]] = relationship(back_populates="classroom_observation")
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+
 class EvidenceDocument(Base):
     __tablename__ = "documents"
 
@@ -156,6 +205,12 @@ class EvidenceDocument(Base):
         nullable=True,
         index=True,
     )
+    classroom_observation_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("classroom_observations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     file_name: Mapped[str] = mapped_column(String(255), nullable=False)
     file_url: Mapped[str] = mapped_column(Text, nullable=False)
     file_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -168,6 +223,7 @@ class EvidenceDocument(Base):
     metadata_json: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
     visit: Mapped["Visit | None"] = relationship(back_populates="documents")
+    classroom_observation: Mapped["ClassroomObservation | None"] = relationship(back_populates="documents")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

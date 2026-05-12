@@ -5,9 +5,13 @@ import { AppShell } from './components/layout/AppShell'
 import { AuthProvider } from './context/AuthContext'
 import { ActivityLogsPage } from './pages/ActivityLogsPage'
 import { AssignedSchoolsPage } from './pages/AssignedSchoolsPage'
+import { AttendancePage } from './pages/AttendancePage'
+import { ClassAttendancePage } from './pages/ClassAttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
+import { MyAttendancePage } from './pages/MyAttendancePage'
+import { ObservationsPage } from './pages/ObservationsPage'
 import { PartnerOrgsPage } from './pages/PartnerOrgsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { SchoolDetailPage } from './pages/SchoolDetailPage'
@@ -46,11 +50,11 @@ function App() {
               <Route path="/dashboard/monitoring" element={<MonitoringVisitsPage />} />
               <Route path="/dashboard/visits" element={<MonitoringVisitsPage />} />
               <Route path="/dashboard/assigned-schools" element={<AssignedSchoolsPage />} />
-              <Route path="/dashboard/observations" element={<PlaceholderPage title="Observations" />} />
-              <Route path="/dashboard/attendance" element={<PlaceholderPage title="Attendance" />} />
+              <Route path="/dashboard/observations" element={<ObservationsPage />} />
+              <Route path="/dashboard/attendance" element={<AttendancePage />} />
               <Route path="/dashboard/timetable" element={<PlaceholderPage title="Timetable" />} />
-              <Route path="/dashboard/my-attendance" element={<PlaceholderPage title="My Attendance" />} />
-              <Route path="/dashboard/class-attendance" element={<PlaceholderPage title="Class Attendance" />} />
+              <Route path="/dashboard/my-attendance" element={<MyAttendancePage />} />
+              <Route path="/dashboard/class-attendance" element={<ClassAttendancePage />} />
             </Route>
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

@@ -3,6 +3,7 @@ from __future__ import annotations
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Enum, Float, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
@@ -11,6 +12,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 from app.models.geography import UnionCouncil
 from app.models.partner_org import PartnerOrg
+
+if TYPE_CHECKING:
+    from app.models.monitoring import ClassroomObservation
 
 
 class SchoolLevel(str, enum.Enum):
@@ -132,6 +136,8 @@ class Teacher(Base):
     )
 
     school: Mapped["School"] = relationship(back_populates="teachers")
+    classroom_observations: Mapped[list["ClassroomObservation"]] = relationship(back_populates="teacher")
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,

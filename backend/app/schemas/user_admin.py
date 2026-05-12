@@ -13,6 +13,7 @@ class UserAdminOut(BaseModel):
     status: str
     partner_org_id: str | None
     district_id: str | None
+    linked_teacher_id: str | None = None
     assigned_schools: list[str]
     created_at: datetime
     updated_at: datetime
@@ -31,6 +32,7 @@ class UserCreate(BaseModel):
     status: UserStatus = UserStatus.ACTIVE
     partner_org_id: str | None = None
     district_id: str | None = None
+    linked_teacher_id: str | None = None
     assigned_schools: list[str] = Field(default_factory=list)
 
 
@@ -42,6 +44,7 @@ class UserUpdate(BaseModel):
     status: UserStatus | None = None
     partner_org_id: str | None = None
     district_id: str | None = None
+    linked_teacher_id: str | None = None
     assigned_schools: list[str] | None = None
 
 

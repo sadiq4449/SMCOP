@@ -1,8 +1,10 @@
 from app.models.activity_log import ActivityLog
+from app.models.attendance import StudentDailyAttendance, TeacherAttendance, TeacherAttendanceApprovalStatus
 from app.models.base import Base
 from app.models.geography import District, Taluka, UnionCouncil
 from app.models.monitoring import (
     KPI,
+    ClassroomObservation,
     EvidenceDocument,
     InfrastructureChecklistItem,
     InfrastructureItemStatus,
@@ -24,6 +26,7 @@ from app.models.user import User, UserRole, UserStatus
 
 __all__ = [
     "ActivityLog",
+    "ClassroomObservation",
     "ActiveStatus",
     "Base",
     "District",
@@ -35,10 +38,13 @@ __all__ = [
     "PartnerOrg",
     "School",
     "SchoolEnrollment",
+    "StudentDailyAttendance",
     "SchoolGender",
     "SchoolLevel",
     "Taluka",
     "Teacher",
+    "TeacherAttendance",
+    "TeacherAttendanceApprovalStatus",
     "TeacherGender",
     "UnionCouncil",
     "User",

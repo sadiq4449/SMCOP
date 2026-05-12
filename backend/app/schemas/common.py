@@ -32,4 +32,5 @@ class UserPublic(BaseModel):
     status: str
     partner_org_id: str | None = None
     district_id: str | None = None
+    linked_teacher_id: str | None = None
     assigned_schools: list[str] = Field(default_factory=list)

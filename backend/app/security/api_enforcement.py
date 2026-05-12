@@ -26,7 +26,12 @@ Mutations call ``app.services.audit.log_activity`` with structured metadata.
 ``PATCH`` KPI/infrastructure/GPS/evidence blocked when ``status = finalized`` except ``SUPER_ADMIN``.
 ``GET /visits`` scoped via ``app.services.visit_access`` (DEO = district schools; Gov = all;
 Enumerator = own visits + assigned schools; Principal/Teacher = assigned-school visits).
-``GET /documents/{id}/download`` requires visit read access.
+``GET /documents/{id}/download`` requires visit read access **or** observation read access when ``classroom_observation_id`` is set.
+
+**Attendance (Iteration 6)** — ``app.api.v1.attendance``:
+Writes blocked for Government/DEO/Enumerator. Principals + Super Admin submit bulk teacher attendance (auto-approved), approve pending rows, export CSV.
+Teachers submit only their linked teacher row (pending until principal approves); ``linked_teacher_id`` required on the user account.
+Student aggregates via POST ``/attendance/student`` for Principals, Teachers, Super Admin within assigned schools.
 
 PRD cross-check (API-CONTRACT §12)
 ----------------------------------

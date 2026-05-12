@@ -291,6 +291,75 @@ CREATE TABLE IF NOT EXISTS documents (
 CREATE INDEX IF NOT EXISTS ix_documents_school_id ON documents (school_id);
 CREATE INDEX IF NOT EXISTS ix_documents_visit_id ON documents (visit_id);
 
-UPDATE alembic_version SET version_num='0004_monitoring_visits' WHERE EXISTS (SELECT 1 FROM alembic_version LIMIT 1);
+CREATE TABLE IF NOT EXISTS classroom_observations (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    visit_id UUID NOT NULL REFERENCES visits (id) ON DELETE CASCADE,
+    teacher_id UUID REFERENCES teachers (id) ON DELETE SET NULL,
+    teacher_name VARCHAR(150),
+    subject VARCHAR(120) NOT NULL,
+    grade VARCHAR(50) NOT NULL,
+    observation_date DATE,
+    score_engagement INTEGER NOT NULL,
+    score_pedagogy INTEGER NOT NULL,
+    score_environment INTEGER NOT NULL,
+    strengths TEXT,
+    weaknesses TEXT,
+    recommendations TEXT,
+    remarks TEXT,
+    reviewer_comments TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_classroom_observations_visit_id ON classroom_observations (visit_id);
+
+ALTER TABLE documents ADD COLUMN IF NOT EXISTS classroom_observation_id UUID REFERENCES classroom_observations (id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS ix_documents_classroom_observation_id ON documents (classroom_observation_id);
+
+DO $$
+BEGIN
+    CREATE TYPE teacher_attendance_approval_status AS ENUM ('pending', 'approved', 'rejected');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS linked_teacher_id UUID REFERENCES teachers (id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS ix_users_linked_teacher_id ON users (linked_teacher_id);
+
+CREATE TABLE IF NOT EXISTS teacher_attendance (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_id UUID NOT NULL REFERENCES schools (id) ON DELETE CASCADE,
+    attendance_date DATE NOT NULL,
+    teacher_id UUID NOT NULL REFERENCES teachers (id) ON DELETE CASCADE,
+    present BOOLEAN NOT NULL,
+    remarks TEXT,
+    verification_photo_url TEXT,
+    approval_status teacher_attendance_approval_status NOT NULL DEFAULT 'pending',
+    submitted_by_user_id UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    approved_by_user_id UUID REFERENCES users (id) ON DELETE SET NULL,
+    approved_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT uq_teacher_attendance_day UNIQUE (school_id, attendance_date, teacher_id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_teacher_attendance_school_id ON teacher_attendance (school_id);
+CREATE INDEX IF NOT EXISTS ix_teacher_attendance_attendance_date ON teacher_attendance (attendance_date);
+
+CREATE TABLE IF NOT EXISTS student_daily_attendance (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_id UUID NOT NULL REFERENCES schools (id) ON DELETE CASCADE,
+    attendance_date DATE NOT NULL,
+    boys_present INTEGER NOT NULL,
+    girls_present INTEGER NOT NULL,
+    submitted_by_user_id UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT uq_student_attendance_school_day UNIQUE (school_id, attendance_date)
+);
+
+CREATE INDEX IF NOT EXISTS ix_student_daily_attendance_school_id ON student_daily_attendance (school_id);
+
+UPDATE alembic_version SET version_num='0006_attendance' WHERE EXISTS (SELECT 1 FROM alembic_version LIMIT 1);
 
 COMMIT;
