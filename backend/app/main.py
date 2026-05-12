@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy.exc import OperationalError, ProgrammingError, StatementError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
@@ -20,6 +20,43 @@ from app.db.seed_geo import seed_geography_and_partner
 from app.models import Base
 
 logger = logging.getLogger(__name__)
+
+
+def _walk_exception_chain(exc: BaseException | None):
+    seen: set[int] = set()
+    while exc is not None and id(exc) not in seen:
+        yield exc
+        seen.add(id(exc))
+        nxt = exc.__cause__
+        if nxt is None and hasattr(exc, "orig"):
+            nxt = getattr(exc, "orig", None)
+        exc = nxt
+
+
+def _is_undefined_table(exc: BaseException) -> bool:
+    for e in _walk_exception_chain(exc):
+        pgcode = getattr(e, "pgcode", None)
+        if pgcode == "42P01":
+            return True
+        msg = str(e).lower()
+        if "does not exist" in msg and ("relation" in msg or "table" in msg):
+            return True
+    return False
+
+
+def _is_programming_related(exc: BaseException) -> bool:
+    for e in _walk_exception_chain(exc):
+        if isinstance(e, ProgrammingError):
+            return True
+        if isinstance(e, StatementError):
+            orig = getattr(e, "orig", None)
+            if isinstance(orig, ProgrammingError):
+                return True
+    return False
+
+
+def _has_operational_error(exc: BaseException) -> bool:
+    return any(isinstance(e, OperationalError) for e in _walk_exception_chain(exc))
 
 
 def _frontend_dist_dir() -> Path | None:
@@ -86,14 +123,21 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     """Return JSON so clients (and axios) can show message instead of falling back to generic errors."""
     logger.exception("%s %s", request.method, request.url.path)
 
-    if isinstance(exc, ProgrammingError):
-        message = (
-            "Database tables are missing. In Supabase → SQL Editor, run "
-            "supabase/000_schema_from_alembic.sql (see supabase/README.txt), then redeploy or wait for a cold start "
-            "so demo users can seed."
-        )
-        code = "database_schema"
-    elif isinstance(exc, OperationalError):
+    if _is_programming_related(exc):
+        if _is_undefined_table(exc):
+            message = (
+                "Database tables are missing. In Supabase → SQL Editor, run "
+                "supabase/000_schema_from_alembic.sql (see supabase/README.txt), then redeploy or wait for a cold start "
+                "so demo users can seed."
+            )
+            code = "database_schema"
+        else:
+            message = (
+                "Database query failed. Try signing in again after a moment; "
+                "or open GET /health/schema on this site to confirm tables, and check Vercel function logs."
+            )
+            code = "database_programming"
+    elif _has_operational_error(exc):
         message = (
             "Cannot reach the database. Verify Postgres env vars on Vercel and that Supabase allows connections "
             "(pooler URI, SSL)."
@@ -157,6 +201,54 @@ def health_env() -> dict[str, bool]:
 def health_db(db: Session = Depends(get_db)) -> dict[str, str]:
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "ok"}
+
+
+_SCHEMA_TABLES = (
+    "users",
+    "activity_logs",
+    "districts",
+    "talukas",
+    "union_councils",
+    "partner_orgs",
+    "schools",
+    "school_enrollment",
+    "teachers",
+)
+
+
+@app.get("/health/schema")
+def health_schema(db: Session = Depends(get_db)) -> dict[str, object]:
+    """Verify core tables exist for this deployment's DATABASE_URL (same DB as login)."""
+    tables: dict[str, bool] = {}
+
+    if settings.database_url.startswith("sqlite"):
+        for name in _SCHEMA_TABLES:
+            n = db.scalar(
+                text("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = :t"),
+                {"t": name},
+            )
+            tables[name] = bool(n)
+    else:
+        for name in _SCHEMA_TABLES:
+            exists = db.scalar(
+                text(
+                    "SELECT EXISTS ("
+                    "SELECT 1 FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_name = :t)"
+                ),
+                {"t": name},
+            )
+            tables[name] = bool(exists)
+
+    users_count: int | None = None
+    if tables.get("users"):
+        users_count = int(db.scalar(text("SELECT COUNT(*) FROM users")) or 0)
+
+    return {
+        "tables": tables,
+        "all_required_tables_present": all(tables.values()),
+        "users_row_count": users_count,
+    }
 
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)

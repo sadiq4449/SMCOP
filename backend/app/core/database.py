@@ -1,7 +1,7 @@
 import os
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import NullPool
@@ -69,6 +69,20 @@ if os.environ.get("VERCEL"):
     _engine_kwargs["poolclass"] = NullPool
 
 engine = create_engine(database_url, **_engine_kwargs)
+
+# Supabase transaction pooler (PgBouncer, host …pooler.supabase.com) breaks psycopg2 server-side
+# prepared statements; disable them on connect (safe for direct connections too).
+_pooler_host = (make_url(database_url).host or "").lower()
+if "pooler.supabase.com" in _pooler_host:
+
+    @event.listens_for(engine, "connect")
+    def _disable_psycopg2_prepare(dbapi_conn, _connection_record):  # noqa: ARG001
+        try:
+            dbapi_conn.prepare_threshold = None
+        except AttributeError:
+            pass
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
