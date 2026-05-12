@@ -52,12 +52,13 @@ def _connect_args(url: str) -> dict:
     if url.startswith("sqlite"):
         return {"check_same_thread": False}
     u = make_url(url)
+    base: dict = {"connect_timeout": 15}
     if "sslmode" in u.query:
-        return {}
+        return base
     host = (u.host or "").lower()
     if "supabase" in host:
-        return {"sslmode": "require"}
-    return {}
+        return {**base, "sslmode": "require"}
+    return base
 
 
 settings = get_settings()

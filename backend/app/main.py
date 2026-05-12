@@ -14,7 +14,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError, StatementError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
-from app.core.config import get_settings
+from app.core.config import any_database_env_defined, get_settings
 from app.core.database import SessionLocal, engine, get_db
 from app.db.seed import seed_demo_users
 from app.db.seed_geo import seed_geography_and_partner
@@ -140,13 +140,16 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             code = "database_programming"
     elif _has_operational_error(exc):
         message = (
-            "Cannot reach the database. Verify Postgres env vars on Vercel and that Supabase allows connections "
-            "(pooler URI, SSL)."
+            "Cannot reach the database. Confirm Production env vars on Vercel (not only Preview), use the pooler URI "
+            "from Supabase (try Transaction pooler port 6543 for serverless), URL-encode special characters in the "
+            "password, then Redeploy. Open GET /health/env and GET /health/db for details."
         )
         code = "database_connection"
     else:
         message = (
-            "Server error. On Vercel, set DATABASE_URL / POSTGRES_URL and apply migrations (see supabase/README.txt)."
+            "Server error. If GET /health/db and GET /health/schema look healthy, check Vercel function logs for the "
+            "traceback (often an app bug after deploy). Otherwise set DATABASE_URL / POSTGRES_URL on Vercel and apply "
+            "migrations (see supabase/README.txt)."
         )
         code = type(exc).__name__
 
@@ -190,24 +193,42 @@ def health() -> dict[str, str]:
 
 
 @app.get("/health/env")
-def health_env() -> dict[str, bool]:
+def health_env() -> dict[str, object]:
     """Presence-only probe for DB-related env (never prints secrets)."""
     def present(key: str) -> bool:
         return bool(os.environ.get(key, "").strip())
 
+    hints = _database_url_hints(settings.database_url)
     return {
         "has_POSTGRES_URL": present("POSTGRES_URL"),
         "has_POSTGRES_PRISMA_URL": present("POSTGRES_PRISMA_URL"),
+        "has_sm_db_POSTGRES_URL": present("sm_db_POSTGRES_URL"),
+        "has_sm_db_POSTGRES_PRISMA_URL": present("sm_db_POSTGRES_PRISMA_URL"),
         "has_DATABASE_URL": present("DATABASE_URL"),
         "has_SUPABASE_DATABASE_URL": present("SUPABASE_DATABASE_URL"),
+        "has_SUPABASE_DB_URL": present("SUPABASE_DB_URL"),
         "vercel": present("VERCEL"),
+        "any_database_env_set": any_database_env_defined(),
+        "resolved_db_host_from_url": hints.get("url_host"),
+        "resolved_db_name_from_url": hints.get("url_database"),
     }
 
 
 @app.get("/health/db")
-def health_db(db: Session = Depends(get_db)) -> dict[str, str]:
-    db.execute(text("SELECT 1"))
-    return {"status": "ok", "database": "ok"}
+def health_db() -> JSONResponse:
+    """Try a round-trip; on failure return a short libpq/psycopg2 line (no secrets)."""
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except OperationalError as e:
+        raw = getattr(e, "orig", None) or e
+        line = str(raw).strip().split("\n", 1)[0][:280]
+        return JSONResponse(
+            status_code=503,
+            content={"status": "error", "database": "unreachable", "detail": line},
+        )
+
+    return JSONResponse(content={"status": "ok", "database": "ok"})
 
 
 _SCHEMA_TABLES = (

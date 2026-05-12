@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -7,6 +8,7 @@ from passlib.context import CryptContext
 
 from app.core.config import get_settings
 
+logger = logging.getLogger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 settings = get_settings()
 
@@ -16,7 +18,13 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    if not plain_password or not hashed_password:
+        return False
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except (ValueError, TypeError) as exc:
+        logger.warning("Password verify failed: %s", exc)
+        return False
 
 
 def _create_token(subject: str, token_type: str, expires_delta: timedelta) -> str:

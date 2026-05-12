@@ -1,11 +1,32 @@
+import os
 from functools import lru_cache
 
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Env names that set `database_url` (must match validation_alias).
+DATABASE_ENV_KEYS = (
+    "DATABASE_URL",
+    "SUPABASE_DATABASE_URL",
+    "SUPABASE_DB_URL",
+    "POSTGRES_URL",
+    "POSTGRES_PRISMA_URL",
+    # Vercel “Connect Supabase Storage” sometimes injects `sm_db_`-prefixed copies:
+    "sm_db_POSTGRES_URL",
+    "sm_db_POSTGRES_PRISMA_URL",
+)
+
+
+def any_database_env_defined() -> bool:
+    return any(os.environ.get(k, "").strip() for k in DATABASE_ENV_KEYS)
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=(".env",) if not os.environ.get("VERCEL") else None,
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
     database_url: str = Field(
         default="postgresql+psycopg2://smocp:smocp@localhost:5432/smocp",
@@ -15,6 +36,8 @@ class Settings(BaseSettings):
             "SUPABASE_DB_URL",
             "POSTGRES_URL",
             "POSTGRES_PRISMA_URL",
+            "sm_db_POSTGRES_URL",
+            "sm_db_POSTGRES_PRISMA_URL",
         ),
     )
     secret_key: str = "change-me-to-a-long-random-secret"
@@ -42,6 +65,19 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return v.strip().lower() in ("1", "true", "yes", "on")
         return v
+
+    @model_validator(mode="after")
+    def _require_database_env_on_vercel(self) -> "Settings":
+        if not os.environ.get("VERCEL"):
+            return self
+        if not any_database_env_defined():
+            raise ValueError(
+                "Vercel has no DATABASE_URL / POSTGRES_URL / sm_db_POSTGRES_* (or other URL aliases) "
+                "in the runtime environment. Add one under Project Settings → Environment Variables "
+                "for Production (and Preview if you use preview URLs), then Redeploy. "
+                "See supabase/README.txt."
+            )
+        return self
 
     @property
     def cors_origin_list(self) -> list[str]:

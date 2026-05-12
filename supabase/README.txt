@@ -25,7 +25,12 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
 
    NOTE: `vercel env pull` often shows linked Postgres vars as empty placeholders locally — secrets still inject at
    runtime on Vercel. If the runtime lacks POSTGRES_* vars for Python, add DATABASE_URL manually in the Vercel dashboard:
-   Supabase → Project Settings → Database → Connection string → URI (session pooler, port 6543).
+   Supabase → Project Settings → Database → Connect → Direct → URI (match port to the mode shown: transaction pooler
+   often 6543; session pooler often 5432 on the pooler host).
+
+   After saving env vars, assign them to Production (and Preview if you use preview URLs), then Redeploy. Open
+   `/health/env` — `any_database_env_set` must be true — and `/health/db` for a short connection error line if login fails.
+   Encode special characters in the DB password inside the URI (`&` `#` `*` etc.).
 
    If `/health/schema` shows `public_table_count: 0`, Vercel is pointing at a different empty DB than the project where you
    ran SQL. Use the URI from the SAME Supabase project (pooler username looks like `postgres.PROJECT_REF` matching your ref).

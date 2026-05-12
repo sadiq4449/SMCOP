@@ -30,7 +30,10 @@ class User(Base):
     full_name: Mapped[str] = mapped_column(String(120), nullable=False)
     email: Mapped[str] = mapped_column(String(150), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole, name="user_role"), nullable=False)
+    role: Mapped[UserRole] = mapped_column(
+        Enum(UserRole, name="user_role", values_callable=lambda obj: [m.value for m in obj]),
+        nullable=False,
+    )
     partner_org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
     assigned_schools: Mapped[list[str]] = mapped_column(
         JSON,
@@ -38,7 +41,7 @@ class User(Base):
         default=list,
     )
     status: Mapped[UserStatus] = mapped_column(
-        Enum(UserStatus, name="user_status"),
+        Enum(UserStatus, name="user_status", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
         default=UserStatus.ACTIVE,
     )

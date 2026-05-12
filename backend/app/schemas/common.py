@@ -5,6 +5,16 @@ from pydantic import BaseModel, ConfigDict
 T = TypeVar("T")
 
 
+def enum_scalar(value: Any) -> str:
+    """API string for a Python / SQLAlchemy enum (or plain str)."""
+    if value is None:
+        raise TypeError("enum_scalar expected non-None value")
+    if isinstance(value, str):
+        return value
+    inner = getattr(value, "value", value)
+    return inner if isinstance(inner, str) else str(inner)
+
+
 class APIResponse(BaseModel, Generic[T]):
     success: bool
     message: str

@@ -42,11 +42,11 @@ class School(Base):
         index=True,
     )
     level: Mapped[SchoolLevel] = mapped_column(
-        Enum(SchoolLevel, name="school_level"),
+        Enum(SchoolLevel, name="school_level", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
     )
     gender: Mapped[SchoolGender] = mapped_column(
-        Enum(SchoolGender, name="school_gender"),
+        Enum(SchoolGender, name="school_gender", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
     )
     partner_org_id: Mapped[uuid.UUID | None] = mapped_column(
@@ -60,7 +60,7 @@ class School(Base):
     gps_latitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     gps_longitude: Mapped[float | None] = mapped_column(Float, nullable=True)
     status: Mapped[ActiveStatus] = mapped_column(
-        Enum(ActiveStatus, name="school_status"),
+        Enum(ActiveStatus, name="school_status", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
         default=ActiveStatus.ACTIVE,
     )
@@ -118,12 +118,12 @@ class Teacher(Base):
     )
     name: Mapped[str] = mapped_column(String(150), nullable=False)
     gender: Mapped[TeacherGender] = mapped_column(
-        Enum(TeacherGender, name="teacher_gender"),
+        Enum(TeacherGender, name="teacher_gender", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
     )
     subject: Mapped[str | None] = mapped_column(String(150), nullable=True)
     status: Mapped[ActiveStatus] = mapped_column(
-        Enum(ActiveStatus, name="teacher_status"),
+        Enum(ActiveStatus, name="teacher_status", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
         default=ActiveStatus.ACTIVE,
     )

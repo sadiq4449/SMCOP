@@ -1,4 +1,5 @@
 from app.models.school import School
+from app.schemas.common import enum_scalar
 from app.schemas.school import SchoolDetail, SchoolSummary
 
 
@@ -15,13 +16,13 @@ def school_summary_from(school: School) -> SchoolSummary:
         district_name=district.name,
         taluka_name=taluka.name,
         uc_name=uc.name,
-        level=school.level.value,
-        gender=school.gender.value,
+        level=enum_scalar(school.level),
+        gender=enum_scalar(school.gender),
         partner_org_id=str(school.partner_org_id) if school.partner_org_id else None,
         partner_org_name=partner.name if partner else None,
         principal_name=school.principal_name,
         principal_phone=school.principal_phone,
-        status=school.status.value,
+        status=enum_scalar(school.status),
     )
 
 
@@ -40,13 +41,13 @@ def school_detail_from(school: School) -> SchoolDetail:
         taluka_id=str(taluka.id),
         taluka_name=taluka.name,
         uc_name=uc.name,
-        level=school.level.value,
-        gender=school.gender.value,
+        level=enum_scalar(school.level),
+        gender=enum_scalar(school.gender),
         partner_org_id=str(school.partner_org_id) if school.partner_org_id else None,
         partner_org_name=partner.name if partner else None,
         principal_name=school.principal_name,
         principal_phone=school.principal_phone,
         gps_latitude=school.gps_latitude,
         gps_longitude=school.gps_longitude,
-        status=school.status.value,
+        status=enum_scalar(school.status),
     )
