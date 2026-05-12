@@ -1,9 +1,13 @@
 from typing import Any
 from uuid import UUID
 
+import logging
+
 from sqlalchemy.orm import Session
 
 from app.models.activity_log import ActivityLog
+
+logger = logging.getLogger(__name__)
 
 
 def log_activity(
@@ -14,11 +18,15 @@ def log_activity(
     user_id: UUID | None = None,
     metadata: dict[str, Any] | None = None,
 ) -> None:
-    entry = ActivityLog(
-        user_id=user_id,
-        action=action,
-        target=target,
-        metadata_json=metadata,
-    )
-    db.add(entry)
-    db.commit()
+    try:
+        entry = ActivityLog(
+            user_id=user_id,
+            action=action,
+            target=target,
+            metadata_json=metadata,
+        )
+        db.add(entry)
+        db.commit()
+    except Exception:
+        logger.warning("Activity log insert skipped", exc_info=True)
+        db.rollback()
