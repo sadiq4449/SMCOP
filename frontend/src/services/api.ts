@@ -23,7 +23,25 @@ export function setAuthToken(token: string | null) {
 export function getApiErrorMessage(error: unknown, fallback = 'Request failed') {
   if (axios.isAxiosError(error)) {
     const axiosError = error as AxiosError<ApiResponse<unknown>>
-    return axiosError.response?.data?.message ?? fallback
+    const data = axiosError.response?.data
+    const msg =
+      data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+        ? data.message
+        : undefined
+    if (msg) {
+      return msg
+    }
+    const status = axiosError.response?.status
+    if (!axiosError.response) {
+      return 'Cannot reach the API. Check that the backend is running and the API URL is correct.'
+    }
+    if (status === 404) {
+      return 'API route not found (404). Check deployment rewrites and API prefix.'
+    }
+    if (status === 500) {
+      return 'Server error (500). Check Vercel function logs and DATABASE_URL / database migrations.'
+    }
+    return fallback
   }
 
   return fallback

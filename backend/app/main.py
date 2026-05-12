@@ -1,18 +1,23 @@
+import logging
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
-from app.core.database import SessionLocal, engine
+from app.core.database import SessionLocal, engine, get_db
 from app.db.seed import seed_demo_users
 from app.db.seed_geo import seed_geography_and_partner
 from app.models import Base
+
+logger = logging.getLogger(__name__)
 
 
 def _frontend_dist_dir() -> Path | None:
@@ -74,6 +79,23 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError) 
     )
 
 
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Return JSON so clients (and axios) can show message instead of falling back to generic errors."""
+    logger.exception("%s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "message": (
+                "Server error. On Vercel, set DATABASE_URL to your Postgres URI and apply migrations "
+                "(see supabase/README.txt)."
+            ),
+            "errors": None,
+        },
+    )
+
+
 @app.on_event("startup")
 def on_startup() -> None:
     if settings.database_url.startswith("sqlite"):
@@ -88,8 +110,9 @@ def on_startup() -> None:
 
 
 @app.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+def health(db: Session = Depends(get_db)) -> dict[str, str]:
+    db.execute(text("SELECT 1"))
+    return {"status": "ok", "database": "ok"}
 
 
 app.include_router(api_router, prefix=settings.api_v1_prefix)
