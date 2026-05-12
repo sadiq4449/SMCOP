@@ -362,4 +362,48 @@ CREATE INDEX IF NOT EXISTS ix_student_daily_attendance_school_id ON student_dail
 
 UPDATE alembic_version SET version_num='0006_attendance' WHERE EXISTS (SELECT 1 FROM alembic_version LIMIT 1);
 
+-- Running upgrade 0006_attendance -> 0007_reports
+
+DO $$ BEGIN
+    CREATE TYPE report_status AS ENUM ('draft', 'submitted', 'approved', 'rejected');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS reports (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_id UUID NOT NULL REFERENCES schools (id) ON DELETE CASCADE,
+    quarter VARCHAR(20) NOT NULL,
+    visit_id UUID REFERENCES visits (id) ON DELETE SET NULL,
+    summary TEXT,
+    recommendations TEXT,
+    principal_infrastructure_notes TEXT,
+    principal_daily_activity_notes TEXT,
+    generated_snapshot JSONB,
+    status report_status NOT NULL DEFAULT 'draft'::report_status,
+    review_remarks TEXT,
+    reviewed_by_user_id UUID REFERENCES users (id) ON DELETE SET NULL,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    created_by_user_id UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT uq_report_school_quarter UNIQUE (school_id, quarter)
+);
+
+CREATE INDEX IF NOT EXISTS ix_reports_school_id ON reports (school_id);
+CREATE INDEX IF NOT EXISTS ix_reports_quarter ON reports (quarter);
+CREATE INDEX IF NOT EXISTS ix_reports_status ON reports (status);
+
+CREATE TABLE IF NOT EXISTS report_comments (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    report_id UUID NOT NULL REFERENCES reports (id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    body TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_report_comments_report_id ON report_comments (report_id);
+
+UPDATE alembic_version SET version_num='0007_reports' WHERE EXISTS (SELECT 1 FROM alembic_version LIMIT 1);
+
 COMMIT;

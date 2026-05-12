@@ -1,4 +1,4 @@
-"""Role × API enforcement reference (Iterations 3–4).
+"""Role × API enforcement reference (Iterations 3–7).
 
 This module documents how access is implemented so reviewers can compare routes to
 the PRD matrix without spelunking every file.
@@ -32,6 +32,13 @@ Enumerator = own visits + assigned schools; Principal/Teacher = assigned-school 
 Writes blocked for Government/DEO/Enumerator. Principals + Super Admin submit bulk teacher attendance (auto-approved), approve pending rows, export CSV.
 Teachers submit only their linked teacher row (pending until principal approves); ``linked_teacher_id`` required on the user account.
 Student aggregates via POST ``/attendance/student`` for Principals, Teachers, Super Admin within assigned schools.
+
+**Reports (Iteration 7)** — ``app.api.v1.reports``:
+Listing and row reads scoped via ``app.services.report_access.reports_select_filtered`` / ``can_read_report``.
+``POST /reports`` and draft body edits: Super Admin, Enumerators, Principals with school access (no Government/DEO body writes).
+``PATCH …/status`` approve/reject: DEO (submitted only, district scope) and Super Admin (any status).
+Government: read list/detail, ``POST/GET …/comments``, ``GET …/export`` only—no PATCH on the report resource.
+``GET /reports/compare`` respects the same school visibility rules as reads.
 
 PRD cross-check (API-CONTRACT §12)
 ----------------------------------

@@ -13,7 +13,11 @@ import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
 import { MyAttendancePage } from './pages/MyAttendancePage'
 import { ObservationsPage } from './pages/ObservationsPage'
 import { PartnerOrgsPage } from './pages/PartnerOrgsPage'
+import { GovernmentSchoolReportsPage } from './pages/GovernmentSchoolReportsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
+import { ReportApprovalsPage } from './pages/ReportApprovalsPage'
+import { ReportComparisonsPage } from './pages/ReportComparisonsPage'
+import { ReportsWorkspacePage } from './pages/ReportsWorkspacePage'
 import { SchoolDetailPage } from './pages/SchoolDetailPage'
 import { SchoolFormPage } from './pages/SchoolFormPage'
 import { SchoolsListPage } from './pages/SchoolsListPage'
@@ -39,12 +43,12 @@ function App() {
               <Route path="/dashboard/schools/:schoolId/edit" element={<SchoolFormPage />} />
               <Route path="/dashboard/schools/:schoolId" element={<SchoolDetailPage />} />
               <Route path="/dashboard/schools" element={<SchoolsListPage />} />
-              <Route path="/dashboard/reports" element={<PlaceholderPage title="Reports" />} />
+              <Route path="/dashboard/reports" element={<ReportsWorkspacePage />} />
               <Route path="/dashboard/settings" element={<PlaceholderPage title="Settings" />} />
               <Route path="/dashboard/districts" element={<PlaceholderPage title="Districts" />} />
-              <Route path="/dashboard/school-reports" element={<PlaceholderPage title="School Reports" />} />
-              <Route path="/dashboard/comparisons" element={<PlaceholderPage title="Comparisons" />} />
-              <Route path="/dashboard/approvals" element={<PlaceholderPage title="Approvals" />} />
+              <Route path="/dashboard/school-reports" element={<GovernmentSchoolReportsPage />} />
+              <Route path="/dashboard/comparisons" element={<ReportComparisonsPage />} />
+              <Route path="/dashboard/approvals" element={<ReportApprovalsPage />} />
               <Route path="/dashboard/monitoring/new" element={<VisitFormPage />} />
               <Route path="/dashboard/monitoring/:visitId" element={<VisitFormPage />} />
               <Route path="/dashboard/monitoring" element={<MonitoringVisitsPage />} />

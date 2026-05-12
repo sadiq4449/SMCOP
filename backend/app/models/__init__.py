@@ -13,6 +13,7 @@ from app.models.monitoring import (
     VisitFormStatus,
 )
 from app.models.partner_org import PartnerOrg
+from app.models.report import Report, ReportComment, ReportStatus
 from app.models.school import (
     ActiveStatus,
     School,
@@ -36,6 +37,9 @@ __all__ = [
     "KPI",
     "KpiScore",
     "PartnerOrg",
+    "Report",
+    "ReportComment",
+    "ReportStatus",
     "School",
     "SchoolEnrollment",
     "StudentDailyAttendance",

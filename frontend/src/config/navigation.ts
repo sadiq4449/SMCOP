@@ -32,6 +32,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   enumerator: [
     sharedDashboard,
     { label: 'Schools', path: '/dashboard/schools' },
+    { label: 'Reports', path: '/dashboard/reports' },
     { label: 'Assigned Schools', path: '/dashboard/assigned-schools' },
     { label: 'Monitoring Visits', path: '/dashboard/monitoring' },
     { label: 'Observations', path: '/dashboard/observations' },
