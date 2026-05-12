@@ -18,6 +18,11 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
    DATABASE_URL=...
    or SUPABASE_DATABASE_URL=...
    or SUPABASE_DB_URL=...
+   The app also accepts POSTGRES_URL / POSTGRES_PRISMA_URL (names used by the Vercel Supabase integration).
+
+   NOTE: `vercel env pull` often shows linked Postgres vars as empty placeholders locally — secrets still inject at
+   runtime on Vercel. If the runtime lacks POSTGRES_* vars for Python, add DATABASE_URL manually in the Vercel dashboard:
+   Supabase → Project Settings → Database → Connection string → URI (session pooler, port 6543).
 
 4) CORS: add your frontend origin (e.g. https://smcop-portal.vercel.app) to CORS_ORIGINS.
 

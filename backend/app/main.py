@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -101,16 +102,41 @@ def on_startup() -> None:
     if settings.database_url.startswith("sqlite"):
         Base.metadata.create_all(bind=engine)
 
-    if settings.seed_demo_users:
-        with SessionLocal() as db:
-            seed_demo_users(db)
+    try:
+        if settings.seed_demo_users:
+            with SessionLocal() as db:
+                seed_demo_users(db)
 
-    with SessionLocal() as db:
-        seed_geography_and_partner(db)
+        with SessionLocal() as db:
+            seed_geography_and_partner(db)
+    except Exception:
+        logger.exception(
+            "Startup database seed failed (check Vercel env POSTGRES_URL / DATABASE_URL and Supabase migrations)."
+        )
 
 
 @app.get("/health")
-def health(db: Session = Depends(get_db)) -> dict[str, str]:
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+
+
+@app.get("/health/env")
+def health_env() -> dict[str, bool]:
+    """Presence-only probe for DB-related env (never prints secrets)."""
+    def present(key: str) -> bool:
+        return bool(os.environ.get(key, "").strip())
+
+    return {
+        "has_POSTGRES_URL": present("POSTGRES_URL"),
+        "has_POSTGRES_PRISMA_URL": present("POSTGRES_PRISMA_URL"),
+        "has_DATABASE_URL": present("DATABASE_URL"),
+        "has_SUPABASE_DATABASE_URL": present("SUPABASE_DATABASE_URL"),
+        "vercel": present("VERCEL"),
+    }
+
+
+@app.get("/health/db")
+def health_db(db: Session = Depends(get_db)) -> dict[str, str]:
     db.execute(text("SELECT 1"))
     return {"status": "ok", "database": "ok"}
 
