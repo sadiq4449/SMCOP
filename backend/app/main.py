@@ -92,7 +92,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
                 "Server error. On Vercel, set DATABASE_URL to your Postgres URI and apply migrations "
                 "(see supabase/README.txt)."
             ),
-            "errors": None,
+            "errors": {"exception": type(exc).__name__},
         },
     )
 
