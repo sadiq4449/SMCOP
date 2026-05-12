@@ -24,6 +24,9 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
    runtime on Vercel. If the runtime lacks POSTGRES_* vars for Python, add DATABASE_URL manually in the Vercel dashboard:
    Supabase → Project Settings → Database → Connection string → URI (session pooler, port 6543).
 
+   If `/health/schema` shows `public_table_count: 0`, Vercel is pointing at a different empty DB than the project where you
+   ran SQL. Use the URI from the SAME Supabase project (pooler username looks like `postgres.PROJECT_REF` matching your ref).
+
 4) CORS: add your frontend origin (e.g. https://smcop-portal.vercel.app) to CORS_ORIGINS.
 
 Regenerate 000_schema_from_alembic.sql after new Alembic revisions:
