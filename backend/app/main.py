@@ -165,16 +165,22 @@ def on_startup() -> None:
     if settings.database_url.startswith("sqlite"):
         Base.metadata.create_all(bind=engine)
 
-    try:
-        if settings.seed_demo_users:
+    if settings.seed_demo_users:
+        try:
             with SessionLocal() as db:
                 seed_demo_users(db)
+            logger.info("Startup demo user seed finished.")
+        except Exception:
+            logger.exception("Startup demo user seed failed (check bcrypt/logs).")
 
+    try:
         with SessionLocal() as db:
             seed_geography_and_partner(db)
+        logger.info("Startup geography seed finished.")
     except Exception:
         logger.exception(
-            "Startup database seed failed (check Vercel env POSTGRES_URL / DATABASE_URL and Supabase migrations)."
+            "Startup geography/partner seed failed (often duplicates OK after first run). "
+            "Check POSTGRES_URL and migrations."
         )
 
 

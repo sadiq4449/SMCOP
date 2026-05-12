@@ -14,6 +14,9 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
    B) SQL Editor (no Alembic on your machine)
       - Supabase → SQL → New query → paste contents of 000_schema_from_alembic.sql → Run.
 
+   Optional demo login rows if `/health/schema` shows users_row_count: 0 (startup seed did not run on serverless):
+      - Run 001_seed_demo_users.sql in the SQL Editor (idempotent). Password for each demo email: Password123!
+
 3) App / Vercel env vars (same URL/password as above, one of):
    DATABASE_URL=...
    or SUPABASE_DATABASE_URL=...
