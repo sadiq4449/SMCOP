@@ -106,12 +106,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           password,
         })
 
-        if (!response.data.success || !response.data.data) {
-          throw new Error(response.data.message)
+        const body = response.data
+        if (!body || typeof body !== 'object') {
+          throw new Error('Unexpected response from the server. Check that VITE_API_BASE_URL matches your deployed API.')
+        }
+        if (!body.success || !body.data) {
+          throw new Error(
+            typeof body.message === 'string' && body.message.trim()
+              ? body.message
+              : 'Sign-in was rejected.',
+          )
         }
 
-        persistSession(response.data.data.token, response.data.data.refresh_token)
-        setUser(response.data.data.user)
+        persistSession(body.data.token, body.data.refresh_token)
+        setUser(body.data.user)
       } catch (error) {
         throw new Error(getApiErrorMessage(error, 'Login failed'))
       }
