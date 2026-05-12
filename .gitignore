@@ -14,7 +14,7 @@ env/
 .env
 .env.local
 .env.vercel*
-.tmp.vercel.env
+.tmp.vercel.*
 _secret_db_url.txt
 backend/.env
 
