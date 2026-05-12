@@ -18,6 +18,7 @@ from app.core.config import any_database_env_defined, get_settings
 from app.core.database import SessionLocal, engine, get_db
 from app.db.seed import seed_demo_users
 from app.db.seed_geo import seed_geography_and_partner
+from app.db.seed_monitoring import seed_kpis_if_empty
 from app.models import Base
 
 logger = logging.getLogger(__name__)
@@ -186,6 +187,13 @@ def on_startup() -> None:
             "Check POSTGRES_URL and migrations."
         )
 
+    try:
+        with SessionLocal() as db:
+            seed_kpis_if_empty(db)
+        logger.info("Startup KPI seed finished.")
+    except Exception:
+        logger.exception("Startup KPI seed failed (requires kpis table / migrations).")
+
 
 @app.get("/health")
 def health() -> dict[str, str]:
@@ -241,6 +249,11 @@ _SCHEMA_TABLES = (
     "schools",
     "school_enrollment",
     "teachers",
+    "kpis",
+    "visits",
+    "kpi_scores",
+    "infrastructure_checklist",
+    "documents",
 )
 
 

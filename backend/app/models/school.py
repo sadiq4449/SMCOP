@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import enum
 import uuid
 from datetime import datetime
@@ -69,6 +71,7 @@ class School(Base):
     partner_org: Mapped[PartnerOrg | None] = relationship(back_populates="schools")
     enrollments: Mapped[list["SchoolEnrollment"]] = relationship(back_populates="school")
     teachers: Mapped[list["Teacher"]] = relationship(back_populates="school")
+    visits: Mapped[list["Visit"]] = relationship(back_populates="school")
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

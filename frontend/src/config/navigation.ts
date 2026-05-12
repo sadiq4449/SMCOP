@@ -11,6 +11,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   super_admin: [
     sharedDashboard,
     { label: 'Users', path: '/dashboard/users' },
+    { label: 'Audit log', path: '/dashboard/audit-log' },
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Partner orgs', path: '/dashboard/partner-orgs' },
     { label: 'Reports', path: '/dashboard/reports' },

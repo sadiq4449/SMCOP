@@ -1,5 +1,6 @@
 import os
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -48,6 +49,15 @@ class Settings(BaseSettings):
     environment: str = "development"
     seed_demo_users: bool = True
     jwt_algorithm: str = "HS256"
+    upload_dir: str = Field(default="uploads", validation_alias=AliasChoices("UPLOAD_DIR"))
+    max_upload_mb: int = Field(default=12, validation_alias=AliasChoices("MAX_UPLOAD_MB"))
+
+    @property
+    def upload_root(self) -> Path:
+        """Directory for evidence files (relative paths resolved under backend/)."""
+        base = Path(__file__).resolve().parent.parent
+        p = Path(self.upload_dir)
+        return p if p.is_absolute() else (base / p)
 
     @field_validator("database_url", mode="before")
     @classmethod

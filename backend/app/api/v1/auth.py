@@ -21,12 +21,17 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _serialize_user(user: User) -> UserPublic:
+    raw_schools = user.assigned_schools if isinstance(user.assigned_schools, list) else []
+    schools = [str(x) for x in raw_schools]
     return UserPublic(
         id=str(user.id),
         full_name=user.full_name,
         email=user.email,
         role=user.role.value,
         status=user.status.value,
+        partner_org_id=str(user.partner_org_id) if user.partner_org_id else None,
+        district_id=str(user.district_id) if user.district_id else None,
+        assigned_schools=schools,
     )
 
 

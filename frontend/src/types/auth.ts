@@ -12,6 +12,9 @@ export interface UserProfile {
   email: string
   role: UserRole
   status: string
+  partner_org_id?: string | null
+  district_id?: string | null
+  assigned_schools?: string[]
 }
 
 export interface ApiResponse<T> {

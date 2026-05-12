@@ -1,11 +1,12 @@
+from __future__ import annotations
+
 import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Enum, String, Text, func
+from sqlalchemy import JSON, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import Mapped, mapped_column
-
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base
 
 
@@ -33,8 +34,15 @@ class User(Base):
     role: Mapped[UserRole] = mapped_column(
         Enum(UserRole, name="user_role", values_callable=lambda obj: [m.value for m in obj]),
         nullable=False,
+        index=True,
     )
-    partner_org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True)
+    partner_org_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    district_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("districts.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     assigned_schools: Mapped[list[str]] = mapped_column(
         JSON,
         nullable=False,
@@ -56,3 +64,4 @@ class User(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    visits_authored: Mapped[list["Visit"]] = relationship(back_populates="visited_by_user")

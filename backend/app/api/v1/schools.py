@@ -26,6 +26,7 @@ from app.schemas.school import (
     TeacherOut,
     TeacherUpdate,
 )
+from app.services.school_access import school_scope_filters, user_can_access_school
 from app.services.school_serializers import school_detail_from, school_summary_from
 
 router = APIRouter(prefix="/schools", tags=["schools"])
@@ -48,6 +49,29 @@ def _not_found() -> HTTPException:
             "errors": {"school_id": "not found"},
         },
     )
+
+
+def _forbidden_school() -> HTTPException:
+    return HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "success": False,
+            "message": "You do not have access to this school",
+            "errors": {"school_id": "forbidden"},
+        },
+    )
+
+
+def _require_visible_school(db: Session, user: User, school_id: UUID) -> School:
+    exists = db.scalar(select(School.id).where(School.id == school_id))
+    if not exists:
+        raise _not_found()
+    if not user_can_access_school(db, user, school_id):
+        raise _forbidden_school()
+    loaded = _get_school(db, school_id)
+    if not loaded:
+        raise _not_found()
+    return loaded
 
 
 def _get_school(db: Session, school_id: UUID) -> School | None:
@@ -93,7 +117,7 @@ def _school_filter_clauses(
 
 @router.get("", response_model=APIResponse[PaginatedSchools])
 def list_schools(
-    _current_user: AuthUser,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
@@ -104,14 +128,18 @@ def list_schools(
     status_filter: ActiveStatus | None = Query(None, alias="status"),
     q: str | None = Query(None, min_length=1, max_length=120),
 ) -> APIResponse[PaginatedSchools]:
-    clauses = _school_filter_clauses(
-        district_id=district_id,
-        taluka_id=taluka_id,
-        uc_id=uc_id,
-        partner_org_id=partner_org_id,
-        status_filter=status_filter,
-        q=q,
-    )
+    scope = school_scope_filters(current_user)
+    clauses = [
+        *scope,
+        *_school_filter_clauses(
+            district_id=district_id,
+            taluka_id=taluka_id,
+            uc_id=uc_id,
+            partner_org_id=partner_org_id,
+            status_filter=status_filter,
+            q=q,
+        ),
+    ]
 
     count_stmt = select(func.count(School.id))
     if clauses:
@@ -203,12 +231,10 @@ def create_school(
 @router.get("/{school_id}", response_model=APIResponse[SchoolDetail])
 def get_school(
     school_id: UUID,
-    _current_user: AuthUser,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[SchoolDetail]:
-    school = _get_school(db, school_id)
-    if not school:
-        raise _not_found()
+    school = _require_visible_school(db, current_user, school_id)
 
     return APIResponse(
         success=True,
@@ -311,11 +337,10 @@ def delete_school(
 @router.get("/{school_id}/enrollment", response_model=APIResponse[list[EnrollmentOut]])
 def list_enrollment(
     school_id: UUID,
-    _current_user: AuthUser,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[list[EnrollmentOut]]:
-    if not db.scalar(select(School.id).where(School.id == school_id)):
-        raise _not_found()
+    _require_visible_school(db, current_user, school_id)
 
     rows = db.scalars(
         select(SchoolEnrollment).where(SchoolEnrollment.school_id == school_id).order_by(SchoolEnrollment.quarter),
@@ -400,11 +425,10 @@ def update_enrollment(
 @router.get("/{school_id}/teachers", response_model=APIResponse[list[TeacherOut]])
 def list_teachers(
     school_id: UUID,
-    _current_user: AuthUser,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[list[TeacherOut]]:
-    if not db.scalar(select(School.id).where(School.id == school_id)):
-        raise _not_found()
+    _require_visible_school(db, current_user, school_id)
 
     rows = db.scalars(select(Teacher).where(Teacher.school_id == school_id).order_by(Teacher.name)).all()
     return APIResponse(

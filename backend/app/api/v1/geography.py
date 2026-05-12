@@ -12,6 +12,7 @@ from app.models.user import User
 from app.schemas.common import APIResponse
 from app.schemas.geography import DistrictOut, TalukaOut, UnionCouncilOut
 from app.schemas.school import SchoolSummary
+from app.services.school_access import school_scope_filters
 from app.services.school_serializers import school_summary_from
 
 router = APIRouter(tags=["geography"])
@@ -100,7 +101,7 @@ def list_ucs(
 def list_schools_under_uc(
     uc_id: str,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_user),
+    current_user: User = Depends(get_current_user),
 ) -> APIResponse[list[SchoolSummary]]:
     uid = _require_uuid(uc_id, "uc_id")
     exists = db.scalar(select(UnionCouncil.id).where(UnionCouncil.id == uid))
@@ -114,6 +115,7 @@ def list_schools_under_uc(
             },
         )
 
+    scope = school_scope_filters(current_user)
     stmt = (
         select(School)
         .where(School.uc_id == uid)
@@ -123,6 +125,8 @@ def list_schools_under_uc(
         )
         .order_by(School.name)
     )
+    if scope:
+        stmt = stmt.where(*scope)
     schools = db.scalars(stmt).unique().all()
 
     return APIResponse(

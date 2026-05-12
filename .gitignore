@@ -35,3 +35,6 @@ Thumbs.db
 
 # Vercel
 .vercel
+
+# Uploaded monitoring evidence (local)
+backend/uploads/

@@ -1,6 +1,6 @@
 from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 
@@ -30,3 +30,6 @@ class UserPublic(BaseModel):
     email: str
     role: str
     status: str
+    partner_org_id: str | None = None
+    district_id: str | None = None
+    assigned_schools: list[str] = Field(default_factory=list)

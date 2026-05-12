@@ -186,3 +186,111 @@ CREATE INDEX IF NOT EXISTS ix_teachers_school_id ON teachers (school_id);
 UPDATE alembic_version SET version_num='0002_geo_partner_schools' WHERE alembic_version.version_num = '0001_initial_auth_tables';
 
 COMMIT;
+
+-- Running upgrade 0002_geo_partner_schools -> 0003_user_district_scope_indexes
+BEGIN;
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS district_id UUID REFERENCES districts (id) ON DELETE SET NULL;
+
+CREATE INDEX IF NOT EXISTS ix_users_district_id ON users (district_id);
+
+CREATE INDEX IF NOT EXISTS ix_users_role ON users (role);
+
+CREATE INDEX IF NOT EXISTS ix_users_partner_org_id ON users (partner_org_id);
+
+UPDATE alembic_version SET version_num='0003_user_district_scope_indexes' WHERE EXISTS (SELECT 1 FROM alembic_version LIMIT 1);
+
+COMMIT;
+
+-- Running upgrade 0003_user_district_scope_indexes -> 0004_monitoring_visits (Postgres)
+BEGIN;
+
+DO $$ BEGIN
+    CREATE TYPE visit_form_status AS ENUM ('draft', 'finalized');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE infrastructure_item_status AS ENUM ('available', 'not_available', 'needs_repair');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
+
+CREATE TABLE IF NOT EXISTS kpis (
+    id UUID NOT NULL PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    max_score INTEGER NOT NULL,
+    category VARCHAR(120) NOT NULL,
+    sort_order INTEGER NOT NULL
+);
+
+INSERT INTO kpis (id, name, description, max_score, category, sort_order) VALUES
+  ('cb8a154b-82ad-508b-83c9-e8c5a6124117'::uuid, 'Enrollment & Attendance', 'Enrollment trends and attendance regularity.', 5, 'Quarterly Monitoring', 1),
+  ('e5c38374-6645-5c5a-b3e9-02b03b1e1a58'::uuid, 'Classroom Instruction Quality', 'Quality of teaching and learning processes.', 5, 'Quarterly Monitoring', 2),
+  ('c17c116e-c334-58ee-bdc5-ff37090511b8'::uuid, 'Teacher Availability', 'Staff presence and timetable coverage.', 5, 'Quarterly Monitoring', 3),
+  ('847c1fb3-d34a-5e5a-b4a6-c0ac2b00b371'::uuid, 'School Infrastructure', 'Buildings, utilities, and facilities.', 5, 'Quarterly Monitoring', 4),
+  ('e88d93f3-88e4-50fc-97f2-84b66d9ee755'::uuid, 'Student Learning Environment', 'Safety, hygiene, and learner experience.', 5, 'Quarterly Monitoring', 5),
+  ('c4cc94c1-56f6-568f-ab53-6fc238ae93b4'::uuid, 'Management & Governance', 'Leadership, records, and SMC engagement.', 5, 'Quarterly Monitoring', 6),
+  ('37daaf67-680c-5338-8a4c-07d8bf3acc9b'::uuid, 'Community Engagement', 'Parent and community participation.', 5, 'Quarterly Monitoring', 7)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS visits (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_id UUID NOT NULL REFERENCES schools (id) ON DELETE CASCADE,
+    quarter VARCHAR(20) NOT NULL,
+    visit_date DATE,
+    visited_by UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    status visit_form_status NOT NULL DEFAULT 'draft'::visit_form_status,
+    remarks TEXT,
+    aggregate_score NUMERIC(6, 2),
+    gps_latitude DOUBLE PRECISION,
+    gps_longitude DOUBLE PRECISION,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
+    CONSTRAINT uq_visit_school_quarter UNIQUE (school_id, quarter)
+);
+
+CREATE INDEX IF NOT EXISTS ix_visits_school_id ON visits (school_id);
+CREATE INDEX IF NOT EXISTS ix_visits_visited_by ON visits (visited_by);
+
+CREATE TABLE IF NOT EXISTS kpi_scores (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    visit_id UUID NOT NULL REFERENCES visits (id) ON DELETE CASCADE,
+    kpi_id UUID NOT NULL REFERENCES kpis (id) ON DELETE RESTRICT,
+    score INTEGER NOT NULL,
+    remarks TEXT,
+    CONSTRAINT uq_kpi_score_visit_kpi UNIQUE (visit_id, kpi_id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_kpi_scores_visit_id ON kpi_scores (visit_id);
+
+CREATE TABLE IF NOT EXISTS infrastructure_checklist (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    visit_id UUID NOT NULL REFERENCES visits (id) ON DELETE CASCADE,
+    item_name VARCHAR(150) NOT NULL,
+    status infrastructure_item_status NOT NULL,
+    remarks TEXT
+);
+
+CREATE INDEX IF NOT EXISTS ix_infrastructure_checklist_visit_id ON infrastructure_checklist (visit_id);
+
+CREATE TABLE IF NOT EXISTS documents (
+    id UUID NOT NULL PRIMARY KEY DEFAULT gen_random_uuid(),
+    school_id UUID NOT NULL REFERENCES schools (id) ON DELETE CASCADE,
+    visit_id UUID REFERENCES visits (id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_url TEXT NOT NULL,
+    file_type VARCHAR(50),
+    uploaded_by UUID NOT NULL REFERENCES users (id) ON DELETE RESTRICT,
+    metadata JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS ix_documents_school_id ON documents (school_id);
+CREATE INDEX IF NOT EXISTS ix_documents_visit_id ON documents (visit_id);
+
+UPDATE alembic_version SET version_num='0004_monitoring_visits' WHERE EXISTS (SELECT 1 FROM alembic_version LIMIT 1);
+
+COMMIT;
