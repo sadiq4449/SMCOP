@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
+from sqlalchemy.engine.url import make_url
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import OperationalError, ProgrammingError, StatementError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -216,6 +217,20 @@ _SCHEMA_TABLES = (
 )
 
 
+def _database_url_hints(url_str: str) -> dict[str, str | None]:
+    if url_str.startswith("sqlite"):
+        return {"driver": "sqlite", "url_host": None, "url_database": None}
+    try:
+        u = make_url(url_str)
+        return {
+            "driver": "postgresql",
+            "url_host": u.host,
+            "url_database": u.database,
+        }
+    except Exception:
+        return {"driver": "unknown", "url_host": None, "url_database": None}
+
+
 @app.get("/health/schema")
 def health_schema(db: Session = Depends(get_db)) -> dict[str, object]:
     """Verify core tables exist for this deployment's DATABASE_URL (same DB as login)."""
@@ -244,10 +259,38 @@ def health_schema(db: Session = Depends(get_db)) -> dict[str, object]:
     if tables.get("users"):
         users_count = int(db.scalar(text("SELECT COUNT(*) FROM users")) or 0)
 
+    hints = _database_url_hints(settings.database_url)
+    connection: dict[str, object | None] = {
+        "driver": hints["driver"],
+        "from_env_url_host": hints["url_host"],
+        "from_env_url_database": hints["url_database"],
+        "session_database": None,
+        "session_user": None,
+        "public_table_count": None,
+    }
+    if hints["driver"] == "postgresql":
+        try:
+            connection["session_database"] = db.scalar(text("SELECT current_database()"))
+            connection["session_user"] = db.scalar(text("SELECT current_user"))
+            connection["public_table_count"] = db.scalar(
+                text(
+                    "SELECT COUNT(*) FROM information_schema.tables "
+                    "WHERE table_schema = 'public' AND table_type = 'BASE TABLE'"
+                )
+            )
+        except Exception:
+            pass
+
     return {
         "tables": tables,
         "all_required_tables_present": all(tables.values()),
         "users_row_count": users_count,
+        "connection": connection,
+        "hint_if_all_tables_missing": (
+            "Vercel is connected to a Postgres database with no app tables in schema public. "
+            "Compare connection.from_env_url_host with Supabase Dashboard -> Project Settings -> Database "
+            "(same project where you ran the SQL). Update POSTGRES_URL / DATABASE_URL or reconnect the Supabase integration."
+        ),
     }
 
 
