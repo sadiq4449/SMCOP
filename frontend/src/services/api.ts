@@ -76,9 +76,10 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed') 
     }
     if (status === 405) {
       return (
-        'Method not allowed (405). The POST likely hit the static SPA instead of the Python API. ' +
-        'In Vercel → Settings → General: set Root Directory to the repository root (leave blank), not "frontend", ' +
-        'so /api/index.py and root vercel.json deploy; then Redeploy. Open /health/db — it must return JSON, not HTML.'
+        'Method not allowed (405). The request hit the static app (HTML) instead of the Python API. ' +
+        'On Vercel: set Project → Settings → Build & Development → Framework Preset to **Other** (or turn off any ' +
+        'dashboard override that ignores root vercel.json), keep Root Directory at the repo root, then Redeploy. ' +
+        'Check GET /docs and GET /health/db — both must return API content (OpenAPI/JSON), not index.html.'
       )
     }
     if (status === 408) {

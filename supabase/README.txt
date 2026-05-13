@@ -32,13 +32,12 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
    `/health/env` — `any_database_env_set` must be true — and `/health/db` for a short connection error line if login fails.
    Encode special characters in the DB password inside the URI (`&` `#` `*` etc.).
 
-   Vercel Root Directory (critical for login / API):
-   If Project Settings → General → Root Directory is set to "frontend" (or any subfolder), files OUTSIDE that folder
-   are not deployed — including repo-root `api/index.py` and root `vercel.json` may not apply. Then `/api/v1/*` and
-   `/health/*` behave like the SPA: GET returns small `index.html`, POST /auth/login returns 405, and the UI shows a
-   generic "Login failed". Fix: set Root Directory to empty (use the git repository root). Keep build as
-   `cd frontend && npm install && npm run build` and output `frontend/dist` (from root vercel.json or dashboard).
-   Redeploy, then open `/health/db` in the browser — you must see JSON, not an HTML page.
+   Vercel Root Directory + framework (critical for login / API):
+   - Root Directory must be the git repository root (e.g. "." or empty), not "frontend", or `api/index.py` is not deployed.
+   - If Framework Preset is **Vite**, Vercel may ignore root `vercel.json` rewrites and serve only the SPA — then
+     GET `/health/db` and GET `/docs` return `index.html` and POST `/api/v1/auth/login` returns 405. Fix: set
+     Framework Preset to **Other** (this repo’s `vercel.json` sets `"framework": "other"`), or disable dashboard
+     overrides for Build / Output so `vercel.json` controls routing. Redeploy, then `/health/db` must return JSON.
 
    If `/health/schema` shows `public_table_count: 0`, Vercel is pointing at a different empty DB than the project where you
    ran SQL. Use the URI from the SAME Supabase project (pooler username looks like `postgres.PROJECT_REF` matching your ref).
