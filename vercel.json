@@ -1,9 +1,32 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "other",
-  "installCommand": "cd frontend && npm install",
+  "installCommand": "pip install -r requirements.txt && cd frontend && npm install",
   "buildCommand": "cd frontend && npm run build",
   "outputDirectory": "frontend/dist",
+  "functions": {
+    "api/index.py": {
+      "includeFiles": "backend/**"
+    }
+  },
+  "headers": [
+    {
+      "source": "/health/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/docs",
+      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+    },
+    {
+      "source": "/openapi.json",
+      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/health/schema", "destination": "/api/index" },

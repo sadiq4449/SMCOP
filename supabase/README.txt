@@ -38,6 +38,7 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
      GET `/health/db` and GET `/docs` return `index.html` and POST `/api/v1/auth/login` returns 405. Fix: set
      Framework Preset to **Other** (this repo’s `vercel.json` sets `"framework": "other"`), or disable dashboard
      overrides for Build / Output so `vercel.json` controls routing. Redeploy, then `/health/db` must return JSON.
+     If it still shows HTML, purge the deployment / CDN cache (e.g. Redeploy without cache) so an old `index.html` response is not reused.
 
    If `/health/schema` shows `public_table_count: 0`, Vercel is pointing at a different empty DB than the project where you
    ran SQL. Use the URI from the SAME Supabase project (pooler username looks like `postgres.PROJECT_REF` matching your ref).

@@ -8,6 +8,7 @@ import { AssignedSchoolsPage } from './pages/AssignedSchoolsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { ClassAttendancePage } from './pages/ClassAttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
+import { ApiRoutingHintPage } from './pages/ApiRoutingHintPage'
 import { LoginPage } from './pages/LoginPage'
 import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
 import { MyAttendancePage } from './pages/MyAttendancePage'
@@ -31,6 +32,12 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/health/*" element={<ApiRoutingHintPage />} />
+          <Route path="/docs/*" element={<ApiRoutingHintPage />} />
+          <Route path="/docs" element={<ApiRoutingHintPage />} />
+          <Route path="/openapi.json" element={<ApiRoutingHintPage />} />
+          <Route path="/redoc" element={<ApiRoutingHintPage />} />
+          <Route path="/api/*" element={<ApiRoutingHintPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
               <Route path="/dashboard" element={<DashboardPage />} />
