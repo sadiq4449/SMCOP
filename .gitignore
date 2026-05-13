@@ -22,9 +22,6 @@ backend/.env
 node_modules/
 frontend/dist/
 
-# Copied by Vercel buildCommand for hybrid static + api/
-public/
-
 # OS & IDE
 .DS_Store
 Thumbs.db

@@ -1,0 +1,2 @@
+# Keeps public/ in git so Vercel accepts outputDirectory: "public".
+# CI clears this folder contents then copies frontend/dist here (see vercel.json buildCommand).
