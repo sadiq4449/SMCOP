@@ -13,7 +13,9 @@ export function ApiRoutingHintPage() {
       </p>
       <p className="mt-4 max-w-xl text-sm text-text-muted">
         Fix deployment: Vercel → Settings → Build &amp; Development → disable dashboard overrides for Framework / Build /
-        Output; use Framework <strong className="text-text-primary">Other</strong> so root{' '}
+        Output; use dashboard Framework preset <strong className="text-text-primary">Other</strong> (no auto-detect), or keep{' '}
+        <code className="text-text-secondary">vercel.json</code> with <code className="text-text-secondary">&quot;framework&quot;: null</code> — do{' '}
+        <strong className="text-text-primary">not</strong> use the string <code className="text-text-secondary">&quot;other&quot;</code> (Vercel rejects it). Then root{' '}
         <code className="text-text-secondary">vercel.json</code> rewrites run; root directory = repo root. Redeploy, then
         purge cache (Deployments → … → Redeploy without cache, or Vercel cache purge).{' '}
         <code className="text-text-secondary">GET /health/db</code> must return JSON.

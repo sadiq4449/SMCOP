@@ -36,7 +36,8 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
    - Root Directory must be the git repository root (e.g. "." or empty), not "frontend", or `api/index.py` is not deployed.
    - If Framework Preset is **Vite**, Vercel may ignore root `vercel.json` rewrites and serve only the SPA — then
      GET `/health/db` and GET `/docs` return `index.html` and POST `/api/v1/auth/login` returns 405. Fix: set
-     Framework Preset to **Other** (this repo’s `vercel.json` sets `"framework": "other"`), or disable dashboard
+     Framework Preset to **Other** in the dashboard (no auto-detect), or keep this repo’s `vercel.json` with
+     `"framework": null` — never `"framework": "other"` (that value is invalid and fails the deployment). Or disable dashboard
      overrides for Build / Output so `vercel.json` controls routing. Redeploy, then `/health/db` must return JSON.
      If it still shows HTML, purge the deployment / CDN cache (e.g. Redeploy without cache) so an old `index.html` response is not reused.
 
