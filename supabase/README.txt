@@ -34,6 +34,9 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
 
    Vercel Root Directory + framework (critical for login / API):
    - Root Directory must be the git repository root (e.g. "." or empty), not "frontend", or `api/index.py` is not deployed.
+   - Static output must live in repo-root **`public/`** (build copies `frontend/dist` there). Using only `frontend/dist` as
+     `outputDirectory` can deploy as a static-only app so **`vercel.json` rewrites never reach** the Python function — then
+     `/health/db` loads the React bundle. This repo uses `outputDirectory: "public"` plus a build step that copies Vite output.
    - Production SPA calls the API under **`/svc/v1`** (see `vercel.json` rewrite + backend default when `VERCEL` is set) so
      browser traffic does not use **`/api/v1`**, which Vercel often resolves as static filesystem routes and returns 405.
    - If Framework Preset is **Vite**, Vercel may ignore root `vercel.json` rewrites — then GET `/health/db` returns `index.html`.
