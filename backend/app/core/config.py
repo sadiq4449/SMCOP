@@ -22,6 +22,13 @@ def any_database_env_defined() -> bool:
     return any(os.environ.get(k, "").strip() for k in DATABASE_ENV_KEYS)
 
 
+def _default_api_v1_prefix() -> str:
+    """Vercel reserves filesystem routing under /api/*; use /svc/v1 unless API_V1_PREFIX is set."""
+    if os.environ.get("VERCEL") and "API_V1_PREFIX" not in os.environ:
+        return "/svc/v1"
+    return "/api/v1"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env",) if not os.environ.get("VERCEL") else None,
@@ -44,7 +51,10 @@ class Settings(BaseSettings):
     secret_key: str = "change-me-to-a-long-random-secret"
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
-    api_v1_prefix: str = "/api/v1"
+    api_v1_prefix: str = Field(
+        default_factory=_default_api_v1_prefix,
+        validation_alias=AliasChoices("API_V1_PREFIX", "api_v1_prefix"),
+    )
     cors_origins: str = Field(
         default="http://localhost:5173",
         validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"),

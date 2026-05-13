@@ -12,13 +12,11 @@ export function ApiRoutingHintPage() {
         ). The client router used to send you to the login screen; you are seeing this page instead.
       </p>
       <p className="mt-4 max-w-xl text-sm text-text-muted">
-        Fix deployment: Vercel → Settings → Build &amp; Development → disable dashboard overrides for Framework / Build /
-        Output; use dashboard Framework preset <strong className="text-text-primary">Other</strong> (no auto-detect), or keep{' '}
-        <code className="text-text-secondary">vercel.json</code> with <code className="text-text-secondary">&quot;framework&quot;: null</code> — do{' '}
-        <strong className="text-text-primary">not</strong> use the string <code className="text-text-secondary">&quot;other&quot;</code> (Vercel rejects it). Then root{' '}
-        <code className="text-text-secondary">vercel.json</code> rewrites run; root directory = repo root. Redeploy, then
-        purge cache (Deployments → … → Redeploy without cache, or Vercel cache purge).{' '}
-        <code className="text-text-secondary">GET /health/db</code> must return JSON.
+        Production builds call the API at <code className="text-text-secondary">/svc/v1</code> (Vercel reserves{' '}
+        <code className="text-text-secondary">/api/*</code> for function filesystem routing). If you still see this page for{' '}
+        <code className="text-text-secondary">/health/db</code>, rewrites may be off or CDN cache stale — redeploy without cache.
+        Set <code className="text-text-secondary">API_V1_PREFIX</code> on the server if you use a custom prefix.{' '}
+        <code className="text-text-secondary">GET /health/db</code> must return JSON when routing is correct.
       </p>
       <p className="mt-4 max-w-xl text-xs text-text-muted">Details: <code className="text-text-secondary">supabase/README.txt</code> (Vercel section).</p>
     </div>

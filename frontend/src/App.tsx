@@ -37,6 +37,7 @@ function App() {
           <Route path="/docs" element={<ApiRoutingHintPage />} />
           <Route path="/openapi.json" element={<ApiRoutingHintPage />} />
           <Route path="/redoc" element={<ApiRoutingHintPage />} />
+          <Route path="/svc/*" element={<ApiRoutingHintPage />} />
           <Route path="/api/*" element={<ApiRoutingHintPage />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>

@@ -2,7 +2,8 @@ import axios, { type AxiosError } from 'axios'
 
 import type { ApiResponse } from '../types/auth'
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/api/v1' : '/svc/v1')
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -76,10 +77,9 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed') 
     }
     if (status === 405) {
       return (
-        'Method not allowed (405). The request hit the static app (HTML) instead of the Python API. ' +
-        'On Vercel: set Project → Settings → Build & Development → Framework Preset to **Other** (or turn off any ' +
-        'dashboard override that ignores root vercel.json), keep Root Directory at the repo root, then Redeploy. ' +
-        'Check GET /docs and GET /health/db — both must return API content (OpenAPI/JSON), not index.html.'
+        'Method not allowed (405). The POST hit the static web app (HTML), not the Python API. ' +
+        'Production builds call /svc/v1 (see vercel.json rewrite) because Vercel treats /api/* specially. ' +
+        'If you still see this, redeploy and confirm GET /health/db returns JSON. Override with VITE_API_BASE_URL and API_V1_PREFIX if needed.'
       )
     }
     if (status === 408) {

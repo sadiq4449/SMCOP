@@ -6,6 +6,10 @@
   "outputDirectory": "frontend/dist",
   "headers": [
     {
+      "source": "/svc/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+    },
+    {
       "source": "/health/(.*)",
       "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
     },
@@ -23,6 +27,7 @@
     }
   ],
   "rewrites": [
+    { "source": "/svc/(.*)", "destination": "/api/index" },
     { "source": "/api/(.*)", "destination": "/api/index" },
     { "source": "/health/schema", "destination": "/api/index" },
     { "source": "/health/db", "destination": "/api/index" },

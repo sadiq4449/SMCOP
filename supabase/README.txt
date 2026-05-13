@@ -34,12 +34,12 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
 
    Vercel Root Directory + framework (critical for login / API):
    - Root Directory must be the git repository root (e.g. "." or empty), not "frontend", or `api/index.py` is not deployed.
-   - If Framework Preset is **Vite**, Vercel may ignore root `vercel.json` rewrites and serve only the SPA — then
-     GET `/health/db` and GET `/docs` return `index.html` and POST `/api/v1/auth/login` returns 405. Fix: set
-     Framework Preset to **Other** in the dashboard (no auto-detect), or keep this repo’s `vercel.json` with
-     `"framework": null` — never `"framework": "other"` (that value is invalid and fails the deployment). Or disable dashboard
-     overrides for Build / Output so `vercel.json` controls routing. Redeploy, then `/health/db` must return JSON.
-     If it still shows HTML, purge the deployment / CDN cache (e.g. Redeploy without cache) so an old `index.html` response is not reused.
+   - Production SPA calls the API under **`/svc/v1`** (see `vercel.json` rewrite + backend default when `VERCEL` is set) so
+     browser traffic does not use **`/api/v1`**, which Vercel often resolves as static filesystem routes and returns 405.
+   - If Framework Preset is **Vite**, Vercel may ignore root `vercel.json` rewrites — then GET `/health/db` returns `index.html`.
+     Use dashboard **Other** (no auto-detect), or keep this repo’s `vercel.json` with `"framework": null` — never the string
+     `"framework": "other"` (invalid JSON, deployment fails). Disable dashboard overrides for Build / Output if needed.
+     Redeploy; purge CDN cache if `/health/db` still serves HTML.
 
    If `/health/schema` shows `public_table_count: 0`, Vercel is pointing at a different empty DB than the project where you
    ran SQL. Use the URI from the SAME Supabase project (pooler username looks like `postgres.PROJECT_REF` matching your ref).
