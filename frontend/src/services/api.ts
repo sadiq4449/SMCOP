@@ -68,11 +68,30 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed') 
     if (status === 401) {
       return 'Invalid email or password, or the account is inactive. If you use the demo users, run supabase/001_seed_demo_users.sql in Supabase after migrations.'
     }
+    if (status === 403) {
+      return 'Forbidden (403). Check Vercel / firewall rules and that the request hits the API, not a static file.'
+    }
     if (status === 404) {
       return 'API route not found (404). Check deployment rewrites and API prefix.'
     }
+    if (status === 405) {
+      return (
+        'Method not allowed (405). The POST likely hit the static SPA instead of the Python API. ' +
+        'In Vercel → Settings → General: set Root Directory to the repository root (leave blank), not "frontend", ' +
+        'so /api/index.py and root vercel.json deploy; then Redeploy. Open /health/db — it must return JSON, not HTML.'
+      )
+    }
+    if (status === 408) {
+      return 'Request timeout (408). Retry or check network.'
+    }
+    if (status === 409) {
+      return 'Conflict (409). The server rejected the request.'
+    }
     if (status === 422) {
       return 'The server rejected the sign-in request (validation). Check email and password format.'
+    }
+    if (status === 429) {
+      return 'Too many requests (429). Wait and retry.'
     }
     if (status === 500) {
       return 'Server error (500). Check Vercel function logs and DATABASE_URL / database migrations.'
@@ -82,6 +101,10 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed') 
     }
     if (status === 503) {
       return 'API unavailable (503). Check Vercel env (DATABASE_URL), Supabase pooler URI, and /health/db on the deployment.'
+    }
+    const label = axiosError.response?.statusText?.trim()
+    if (status != null) {
+      return `${fallback} (HTTP ${status}${label ? ` ${label}` : ''}).`
     }
     return fallback
   }

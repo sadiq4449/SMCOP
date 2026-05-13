@@ -45,7 +45,10 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 30
     refresh_token_expire_days: int = 7
     api_v1_prefix: str = "/api/v1"
-    cors_origins: str = "http://localhost:5173"
+    cors_origins: str = Field(
+        default="http://localhost:5173",
+        validation_alias=AliasChoices("CORS_ORIGINS", "cors_origins"),
+    )
     environment: str = "development"
     seed_demo_users: bool = True
     jwt_algorithm: str = "HS256"
@@ -91,7 +94,16 @@ class Settings(BaseSettings):
 
     @property
     def cors_origin_list(self) -> list[str]:
-        return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+        """Origins for CORSMiddleware; comma-separated in env. Trailing slashes stripped (browser Origin has none)."""
+        out: list[str] = []
+        for part in self.cors_origins.split(","):
+            s = part.strip()
+            if not s:
+                continue
+            while len(s) > 1 and s.endswith("/"):
+                s = s[:-1].rstrip()
+            out.append(s)
+        return out
 
 
 @lru_cache
