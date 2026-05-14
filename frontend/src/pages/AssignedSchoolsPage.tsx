@@ -5,37 +5,44 @@ import { useAuth } from '../context/AuthContext'
 import { getSchools } from '../services/schoolsApi'
 import type { SchoolSummary } from '../types/school'
 
+const fieldRoles = ['enumerator', 'principal'] as const
+
 export function AssignedSchoolsPage() {
   const { user } = useAuth()
   const [items, setItems] = useState<SchoolSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const allowed = user && (fieldRoles as readonly string[]).includes(user.role)
+
   useEffect(() => {
-    if (!user || user.role !== 'enumerator') return
+    if (!allowed) return
     setLoading(true)
     void getSchools({ limit: 100 })
       .then((r) => setItems(r.items))
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
-  }, [user])
+  }, [allowed])
 
-  if (!user || user.role !== 'enumerator') {
+  if (!user || !allowed) {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Assigned schools are available to enumerators.</p>
+        <p className="text-text-secondary">Assigned schools are available to enumerators and principals.</p>
       </section>
     )
   }
 
+  const enumeratorCopy =
+    user.role === 'enumerator'
+      ? 'Schools your account may monitor. Start a quarterly visit from here.'
+      : 'Schools tied to your account for reporting, observations, and compliance workflows.'
+
   return (
     <div className="space-y-6">
       <header>
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Field work</p>
+        <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">School access</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Assigned schools</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Schools your account may monitor. Start a quarterly visit from here.
-        </p>
+        <p className="mt-1 text-sm text-text-muted">{enumeratorCopy}</p>
       </header>
 
       {error ? (
@@ -57,12 +64,31 @@ export function AssignedSchoolsPage() {
                   {s.emis_code} · {s.district_name}
                 </p>
               </div>
-              <Link
-                to={`/dashboard/monitoring/new?schoolId=${encodeURIComponent(s.id)}`}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-secondary"
-              >
-                New visit
-              </Link>
+              <div className="flex flex-wrap gap-2">
+                {user.role === 'enumerator' ? (
+                  <Link
+                    to={`/dashboard/monitoring/new?schoolId=${encodeURIComponent(s.id)}`}
+                    className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-secondary"
+                  >
+                    New visit
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      to="/dashboard/reports"
+                      className="rounded-lg border border-muted-surface px-3 py-1.5 text-sm font-semibold text-text-primary hover:bg-muted-surface/40"
+                    >
+                      Quarterly reports
+                    </Link>
+                    <Link
+                      to={`/dashboard/schools/${encodeURIComponent(s.id)}`}
+                      className="rounded-lg bg-primary px-3 py-1.5 text-sm font-semibold text-white hover:bg-secondary"
+                    >
+                      School profile
+                    </Link>
+                  </>
+                )}
+              </div>
             </div>
           ))}
           {!loading && items.length === 0 ? (

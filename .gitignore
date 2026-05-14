@@ -10,6 +10,9 @@ env/
 .pytest_cache/
 .mypy_cache/
 
+# Local dev-only payloads (credentials)
+_login_body.json
+
 # Env & secrets
 .env
 .env.local

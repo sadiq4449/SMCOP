@@ -41,6 +41,7 @@ from app.services.report_access import (
     user_can_view_school_for_compare,
 )
 from app.services.notify import notify_report_approved, notify_report_submitted
+from app.services.report_export import report_to_pdf, report_to_xlsx
 from app.services.report_generation import (
     build_snapshot,
     compare_district_metrics,
@@ -108,10 +109,28 @@ def create_report(
     db: Session = Depends(get_db),
 ) -> APIResponse[ReportOut]:
     if current_user.role == UserRole.TEACHER:
-        raise _forbidden()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": "Teachers cannot create quarterly reports.",
+                "errors": {"report": "forbidden"},
+            },
+        )
     school_uuid = UUID(payload.school_id)
     if not can_create_report(db, current_user, school_uuid):
-        raise _forbidden()
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": (
+                    "You cannot create a report for this school. "
+                    "Super admins may draft for any school; others must pick a school assigned to their account "
+                    "(see Assigned schools)."
+                ),
+                "errors": {"school_id": "forbidden"},
+            },
+        )
 
     try:
         norm_q = normalize_quarter(payload.quarter)

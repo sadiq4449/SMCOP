@@ -171,7 +171,7 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed') 
       return 'Session expired or authentication failed. Sign in again.'
     }
     if (status === 403) {
-      return 'Forbidden (403). Check Vercel / firewall rules and that the request hits the API, not a static file.'
+      return 'Permission denied (403). Your role or school assignment may not allow this action.'
     }
     if (status === 404) {
       return 'API route not found (404). Check deployment rewrites and API prefix.'

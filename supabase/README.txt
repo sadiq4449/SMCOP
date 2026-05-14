@@ -16,10 +16,13 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
 
    Optional demo login rows if `/health/schema` shows users_row_count: 0 (startup seed did not run on serverless):
       - Run 001_seed_demo_users.sql in the SQL Editor (idempotent). Password for each demo email: Password123!
-   Optional: after you have districts + schools, run 002_backfill_demo_scopes.sql so demo DEO / principal /
-      enumerator / teacher accounts get `district_id` or `assigned_schools` (otherwise many list APIs look "empty").
    Optional: sample districts / talukas / union councils (Sindh-style list) — run 003_seed_geography_sindh_sample.sql
       (idempotent). Adjust codes in that file if they conflict with existing `districts.code` (UNIQUE).
+   Optional demo schools + linked demo teacher login — run 004_seed_demo_schools.sql after 003 (needs matching UC names).
+      Creates `SMOCP-DEMO-*` schools, a `Demo Teacher (seeded)` row, and sets `teacher@example.com` linked_teacher_id.
+   Optional: after districts + schools exist, run 002_backfill_demo_scopes.sql so demo DEO / principal /
+      enumerator / teacher accounts get `district_id` or `assigned_schools`. Run after 003 and 004 for a full demo chain.
+      When `SMOCP-DEMO-*` schools exist, 002 merges their IDs into existing `assigned_schools` (deduped), not only empty arrays.
 
 3) App / Vercel env vars (same URL/password as above, one of):
    DATABASE_URL=...

@@ -8,6 +8,7 @@ import { AssignedSchoolsPage } from './pages/AssignedSchoolsPage'
 import { AttendancePage } from './pages/AttendancePage'
 import { ClassAttendancePage } from './pages/ClassAttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
+import { DistrictsBrowsePage } from './pages/DistrictsBrowsePage'
 import { ApiRoutingHintPage } from './pages/ApiRoutingHintPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GeographyPage } from './pages/GeographyPage'
@@ -18,14 +19,15 @@ import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
 import { MyAttendancePage } from './pages/MyAttendancePage'
 import { ObservationsPage } from './pages/ObservationsPage'
 import { PartnerOrgsPage } from './pages/PartnerOrgsPage'
-import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReportApprovalsPage } from './pages/ReportApprovalsPage'
 import { ReportComparisonsPage } from './pages/ReportComparisonsPage'
 import { ReportsWorkspacePage } from './pages/ReportsWorkspacePage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { SchoolDetailPage } from './pages/SchoolDetailPage'
 import { SchoolFormPage } from './pages/SchoolFormPage'
 import { SchoolsListPage } from './pages/SchoolsListPage'
+import { TimetablePage } from './pages/TimetablePage'
 import { UserFormPage } from './pages/UserFormPage'
 import { UsersListPage } from './pages/UsersListPage'
 import { VisitFormPage } from './pages/VisitFormPage'
@@ -59,8 +61,8 @@ function App() {
               <Route path="/dashboard/schools/:schoolId" element={<SchoolDetailPage />} />
               <Route path="/dashboard/schools" element={<SchoolsListPage />} />
               <Route path="/dashboard/reports" element={<ReportsWorkspacePage />} />
-              <Route path="/dashboard/settings" element={<PlaceholderPage title="Settings" />} />
-              <Route path="/dashboard/districts" element={<PlaceholderPage title="Districts" />} />
+              <Route path="/dashboard/settings" element={<SettingsPage />} />
+              <Route path="/dashboard/districts" element={<DistrictsBrowsePage />} />
               <Route path="/dashboard/school-reports" element={<GovernmentSchoolReportsPage />} />
               <Route path="/dashboard/comparisons" element={<ReportComparisonsPage />} />
               <Route path="/dashboard/approvals" element={<ReportApprovalsPage />} />
@@ -72,7 +74,7 @@ function App() {
               <Route path="/dashboard/issues" element={<IssuesPage />} />
               <Route path="/dashboard/observations" element={<ObservationsPage />} />
               <Route path="/dashboard/attendance" element={<AttendancePage />} />
-              <Route path="/dashboard/timetable" element={<PlaceholderPage title="Timetable" />} />
+              <Route path="/dashboard/timetable" element={<TimetablePage />} />
               <Route path="/dashboard/my-attendance" element={<MyAttendancePage />} />
               <Route path="/dashboard/class-attendance" element={<ClassAttendancePage />} />
             </Route>
