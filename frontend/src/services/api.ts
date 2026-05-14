@@ -2,8 +2,37 @@ import axios, { type AxiosError } from 'axios'
 
 import type { ApiResponse } from '../types/auth'
 
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? '/api/v1' : '/svc/v1')
+/**
+ * Resolved API base URL. On Vercel, the SPA must not POST to "/" or "/auth/*" —
+ * those hit static index.html → 405. Default prod is same-origin `/svc/v1` (see vercel.json).
+ */
+function resolveApiBaseUrl(): string {
+  const raw = import.meta.env.VITE_API_BASE_URL
+  if (raw === undefined || raw === null || String(raw).trim() === '') {
+    return import.meta.env.DEV ? '/api/v1' : '/svc/v1'
+  }
+  let s = String(raw).trim().replace(/\/+$/, '')
+  if (!s) {
+    return import.meta.env.DEV ? '/api/v1' : '/svc/v1'
+  }
+
+  // Dashboard mistake: absolute URL at site origin only → axios joins "/auth/login" at root → SPA static → 405.
+  if (import.meta.env.PROD && /^https?:\/\//i.test(s)) {
+    try {
+      const url = new URL(s)
+      const path = url.pathname.replace(/\/+$/, '') || ''
+      if (!path || path === '/') {
+        return `${url.origin}/svc/v1`
+      }
+    } catch {
+      /* use s */
+    }
+  }
+
+  return s
+}
+
+const API_BASE_URL = resolveApiBaseUrl()
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
