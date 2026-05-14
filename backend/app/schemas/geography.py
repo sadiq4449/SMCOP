@@ -1,10 +1,12 @@
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class DistrictOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
+    id: UUID
     name: str
     code: str | None
 
@@ -12,16 +14,16 @@ class DistrictOut(BaseModel):
 class TalukaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    district_id: str
+    id: UUID
+    district_id: UUID
     name: str
 
 
 class UnionCouncilOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    taluka_id: str
+    id: UUID
+    taluka_id: UUID
     name: str
 
 
