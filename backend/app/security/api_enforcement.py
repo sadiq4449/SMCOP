@@ -29,16 +29,18 @@ Enumerator = own visits + assigned schools; Principal/Teacher = assigned-school 
 ``GET /documents/{id}/download`` requires visit read access **or** observation read access when ``classroom_observation_id`` is set.
 
 **Attendance (Iteration 6)** — ``app.api.v1.attendance``:
-Writes blocked for Government/DEO/Enumerator. Principals + Super Admin submit bulk teacher attendance (auto-approved), approve pending rows, export CSV.
+Writes blocked for Government/DEO/Enumerator. Principals + Super Admin submit bulk teacher attendance (auto-approved), approve pending rows, export CSV or Excel (``/attendance/export.csv``, ``/attendance/export.xlsx``).
 Teachers submit only their linked teacher row (pending until principal approves); ``linked_teacher_id`` required on the user account.
 Student aggregates via POST ``/attendance/student`` for Principals, Teachers, Super Admin within assigned schools.
 
 **Reports (Iteration 7)** — ``app.api.v1.reports``:
 Listing and row reads scoped via ``app.services.report_access.reports_select_filtered`` / ``can_read_report``.
 ``POST /reports`` and draft body edits: Super Admin, Enumerators, Principals with school access (no Government/DEO body writes).
-``PATCH …/status`` approve/reject: DEO (submitted only, district scope) and Super Admin (any status).
+``PATCH …/status`` approve/reject: DEO (district scope) and Super Admin; report must be ``submitted``.
 Government: read list/detail, ``POST/GET …/comments``, ``GET …/export`` only—no PATCH on the report resource.
-``GET /reports/compare`` respects the same school visibility rules as reads.
+``GET /reports/compare`` (schools, same quarter), ``GET /reports/compare/districts`` (Government/Super Admin),
+``GET /reports/compare/quarters`` (one school, multiple quarters) use the same visibility rules as report reads where applicable.
+Approve/reject (``PATCH /reports/{id}/status``) requires ``submitted`` status for all roles including Super Admin.
 
 PRD cross-check (API-CONTRACT §12)
 ----------------------------------

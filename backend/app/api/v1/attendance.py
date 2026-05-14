@@ -4,10 +4,12 @@ import calendar
 import csv
 import io
 from datetime import date, datetime, timezone
+from io import BytesIO
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from openpyxl import Workbook
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -605,5 +607,111 @@ def export_attendance_csv(
     return Response(
         content=buf.getvalue(),
         media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/export.xlsx")
+def export_attendance_xlsx(
+    current_user: AuthUser,
+    db: Session = Depends(get_db),
+    school_id: UUID = Query(...),
+    month: str = Query(..., min_length=7, max_length=7),
+    kind: str = Query("teacher", pattern="^(teacher|student)$"),
+):
+    if not can_export_attendance(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": "Export is limited to Principals and Super Admin",
+                "errors": {"role": "forbidden"},
+            },
+        )
+
+    if current_user.role == UserRole.PRINCIPAL and not can_review_teacher_attendance(db, current_user, school_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": "You cannot export attendance for this school",
+                "errors": {"school_id": "forbidden"},
+            },
+        )
+
+    if not can_read_attendance_for_school(db, current_user, school_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": "You cannot export attendance for this school",
+                "errors": {"school_id": "forbidden"},
+            },
+        )
+
+    start, end = _month_bounds(month)
+    wb = Workbook()
+    ws = wb.active
+    if ws is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"success": False, "message": "Could not create workbook", "errors": {"export": "failed"}},
+        )
+    ws.title = "teacher" if kind == "teacher" else "student"
+
+    if kind == "teacher":
+        ws.append(
+            ["school_id", "date", "teacher_id", "teacher_name", "present", "approval_status", "remarks"],
+        )
+        t_rows = db.scalars(
+            select(TeacherAttendance)
+            .where(
+                TeacherAttendance.school_id == school_id,
+                TeacherAttendance.attendance_date >= start,
+                TeacherAttendance.attendance_date <= end,
+            )
+            .options(selectinload(TeacherAttendance.teacher))
+            .order_by(TeacherAttendance.attendance_date, TeacherAttendance.teacher_id),
+        ).unique().all()
+        for r in t_rows:
+            ws.append(
+                [
+                    str(r.school_id),
+                    r.attendance_date.isoformat(),
+                    str(r.teacher_id),
+                    r.teacher.name if r.teacher else "",
+                    1 if r.present else 0,
+                    r.approval_status.value,
+                    r.remarks or "",
+                ],
+            )
+    else:
+        ws.append(["school_id", "date", "boys_present", "girls_present"])
+        s_rows = db.scalars(
+            select(StudentDailyAttendance)
+            .where(
+                StudentDailyAttendance.school_id == school_id,
+                StudentDailyAttendance.attendance_date >= start,
+                StudentDailyAttendance.attendance_date <= end,
+            )
+            .order_by(StudentDailyAttendance.attendance_date),
+        ).all()
+        for r in s_rows:
+            ws.append(
+                [
+                    str(r.school_id),
+                    r.attendance_date.isoformat(),
+                    r.boys_present,
+                    r.girls_present,
+                ],
+            )
+
+    buf = BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"attendance-{kind}-{school_id}-{month}.xlsx"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

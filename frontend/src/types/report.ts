@@ -41,6 +41,40 @@ export interface CompareReportsResult {
   schools: CompareSchoolRow[]
 }
 
+export interface CompareDistrictRow {
+  district_id: string
+  district_name: string | null
+  quarter: string
+  school_count: number
+  visits_recorded: number
+  avg_aggregate_score: number | null
+  classroom_observations_total: number
+  approved_reports_count: number
+}
+
+export interface CompareDistrictsResult {
+  quarter: string
+  districts: CompareDistrictRow[]
+}
+
+export interface CompareQuarterRow {
+  school_id: string
+  school_name: string | null
+  quarter: string
+  visit_found: boolean
+  visit_status: string | null
+  aggregate_score: number | null
+  classroom_observation_count: number | null
+  report_status: string | null
+  report_id: string | null
+}
+
+export interface CompareQuartersResult {
+  school_id: string
+  school_name: string | null
+  quarters: CompareQuarterRow[]
+}
+
 export interface ReportComment {
   id: string
   user_id: string

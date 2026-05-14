@@ -67,3 +67,19 @@ export async function downloadAttendanceExport(params: { school_id: string; mont
   a.click()
   URL.revokeObjectURL(url)
 }
+
+export async function downloadAttendanceExportXlsx(params: { school_id: string; month: string; kind: 'teacher' | 'student' }) {
+  const response = await apiClient.get<ArrayBuffer>('/attendance/export.xlsx', {
+    params,
+    responseType: 'arraybuffer',
+  })
+  const blob = new Blob([response.data], {
+    type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `attendance-${params.kind}-${params.school_id}-${params.month}.xlsx`
+  a.click()
+  URL.revokeObjectURL(url)
+}

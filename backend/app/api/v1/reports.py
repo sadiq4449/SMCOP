@@ -8,12 +8,16 @@ from sqlalchemy.orm import Session, selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
-from app.models.geography import Taluka, UnionCouncil
+from app.models.geography import District, Taluka, UnionCouncil
 from app.models.report import Report, ReportComment, ReportStatus
 from app.models.school import School
 from app.models.user import User, UserRole
 from app.schemas.common import APIResponse
 from app.schemas.report import (
+    CompareDistrictMetrics,
+    CompareDistrictsOut,
+    CompareQuarterMetrics,
+    CompareQuartersOut,
     CompareReportsOut,
     CompareSchoolMetrics,
     PaginatedReports,
@@ -37,7 +41,13 @@ from app.services.report_access import (
     user_can_view_school_for_compare,
 )
 from app.services.report_export import report_to_pdf, report_to_xlsx
-from app.services.report_generation import build_snapshot, compare_school_metrics, normalize_quarter
+from app.services.report_generation import (
+    build_snapshot,
+    compare_district_metrics,
+    compare_school_across_quarters,
+    compare_school_metrics,
+    normalize_quarter,
+)
 
 router = APIRouter(prefix="/reports", tags=["reports"])
 
@@ -199,6 +209,82 @@ def list_reports(
     )
 
 
+@router.get("/compare/districts", response_model=APIResponse[CompareDistrictsOut])
+def compare_districts(
+    current_user: AuthUser,
+    db: Session = Depends(get_db),
+    quarter: str = Query(..., min_length=5, max_length=20),
+    district_ids: str = Query(..., description="Comma-separated district UUIDs"),
+) -> APIResponse[CompareDistrictsOut]:
+    """District roll-ups for Government and Super Admin (Iteration 7)."""
+    if current_user.role not in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
+        raise _forbidden()
+
+    try:
+        norm_q = normalize_quarter(quarter)
+    except ValueError as exc:
+        raise _bad(str(exc), "quarter") from exc
+
+    raw_ids = [x.strip() for x in district_ids.split(",") if x.strip()]
+    if len(raw_ids) < 2 or len(raw_ids) > 8:
+        raise _bad("Provide between 2 and 8 district IDs", "district_ids")
+
+    parsed: list[UUID] = []
+    for item in raw_ids:
+        try:
+            parsed.append(UUID(item))
+        except ValueError:
+            raise _bad("Invalid UUID in district_ids", "district_ids") from None
+
+    for did in parsed:
+        if db.get(District, did) is None:
+            raise _bad("Unknown district_id", "district_ids")
+
+    rows = compare_district_metrics(db, parsed, norm_q)
+    districts = [CompareDistrictMetrics.model_validate(r) for r in rows]
+    return APIResponse(success=True, message="District comparison generated successfully", data=CompareDistrictsOut(quarter=norm_q, districts=districts))
+
+
+@router.get("/compare/quarters", response_model=APIResponse[CompareQuartersOut])
+def compare_quarters(
+    current_user: AuthUser,
+    db: Session = Depends(get_db),
+    school_id: UUID = Query(...),
+    quarters: str = Query(..., description="Comma-separated quarters e.g. Q1-2026,Q2-2026"),
+) -> APIResponse[CompareQuartersOut]:
+    """Quarter-over-quarter metrics for one school."""
+    if current_user.role == UserRole.TEACHER:
+        raise _forbidden()
+
+    if not user_can_view_school_for_compare(db, current_user, school_id):
+        raise _forbidden()
+
+    raw_q = [x.strip() for x in quarters.split(",") if x.strip()]
+    if len(raw_q) < 2 or len(raw_q) > 8:
+        raise _bad("Provide between 2 and 8 quarters", "quarters")
+
+    for q in raw_q:
+        try:
+            normalize_quarter(q)
+        except ValueError as exc:
+            raise _bad(str(exc), "quarters") from exc
+
+    school = db.get(School, school_id)
+    rows = compare_school_across_quarters(db, school_id, raw_q)
+    for r in rows:
+        r["school_name"] = school.name if school else None
+    quarter_rows = [CompareQuarterMetrics.model_validate(r) for r in rows]
+    return APIResponse(
+        success=True,
+        message="Quarter comparison generated successfully",
+        data=CompareQuartersOut(
+            school_id=str(school_id),
+            school_name=school.name if school else None,
+            quarters=quarter_rows,
+        ),
+    )
+
+
 @router.get("/compare", response_model=APIResponse[CompareReportsOut])
 def compare_reports(
     current_user: AuthUser,
@@ -324,8 +410,8 @@ def review_report(
     if not can_review_report_status(db, current_user, report):
         raise _forbidden()
 
-    if current_user.role == UserRole.DEO and report.status != ReportStatus.SUBMITTED:
-        raise _bad("Only submitted reports can be reviewed by DEO", "status")
+    if report.status != ReportStatus.SUBMITTED:
+        raise _bad("Only submitted reports can be approved or rejected", "status")
 
     if payload.status == "approved":
         report.status = ReportStatus.APPROVED

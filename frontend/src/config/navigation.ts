@@ -27,7 +27,9 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     sharedDashboard,
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Approvals', path: '/dashboard/approvals' },
+    { label: 'Comparisons', path: '/dashboard/comparisons' },
     { label: 'Field Visits', path: '/dashboard/visits' },
+    { label: 'Observations', path: '/dashboard/observations' },
   ],
   enumerator: [
     sharedDashboard,
@@ -40,6 +42,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   principal: [
     sharedDashboard,
     { label: 'Schools', path: '/dashboard/schools' },
+    { label: 'Observations', path: '/dashboard/observations' },
     { label: 'Attendance', path: '/dashboard/attendance' },
     { label: 'Timetable', path: '/dashboard/timetable' },
     { label: 'School Reports', path: '/dashboard/reports' },

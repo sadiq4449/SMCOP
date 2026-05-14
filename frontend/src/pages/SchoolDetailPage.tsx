@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { monthlyStudentAttendance, monthlyTeacherAttendance } from '../services/attendanceApi'
 import { listObservations } from '../services/observationsApi'
 import {
   createEnrollment,
@@ -14,8 +15,15 @@ import {
   getTeachers,
 } from '../services/schoolsApi'
 import { downloadDocument } from '../services/visitsApi'
+import type { TeacherAttendanceRecord } from '../types/attendance'
 import type { ClassroomObservation } from '../types/observation'
 import type { EnrollmentRow, SchoolDetail, TeacherRow } from '../types/school'
+
+function attendanceMonthNow() {
+  const d = new Date()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  return `${d.getFullYear()}-${m}`
+}
 
 export function SchoolDetailPage() {
   const { schoolId } = useParams<{ schoolId: string }>()
@@ -23,6 +31,7 @@ export function SchoolDetailPage() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
   const isGovernment = user?.role === 'government'
+  const isDeoUser = user?.role === 'deo'
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -30,6 +39,13 @@ export function SchoolDetailPage() {
   const [enrollment, setEnrollment] = useState<EnrollmentRow[]>([])
   const [teachers, setTeachers] = useState<TeacherRow[]>([])
   const [observations, setObservations] = useState<ClassroomObservation[]>([])
+  const [attMonth, setAttMonth] = useState(attendanceMonthNow)
+  const [attTeachers, setAttTeachers] = useState<TeacherAttendanceRecord[]>([])
+  const [attStudentDays, setAttStudentDays] = useState<
+    { attendance_date: string; boys_present: number; girls_present: number }[]
+  >([])
+  const [attTotals, setAttTotals] = useState({ boys_present_sum: 0, girls_present_sum: 0, days_recorded: 0 })
+  const [attBusy, setAttBusy] = useState(false)
 
   const [qQuarter, setQQuarter] = useState('Q2-2026')
   const [qBoys, setQBoys] = useState(0)
@@ -72,6 +88,45 @@ export function SchoolDetailPage() {
       cancelled = true
     }
   }, [schoolId])
+
+  useEffect(() => {
+    if (!schoolId || (!isGovernment && !isDeoUser)) return
+    let cancelled = false
+    setAttBusy(true)
+    void Promise.all([
+      monthlyTeacherAttendance({ school_id: schoolId, month: attMonth }),
+      monthlyStudentAttendance({ school_id: schoolId, month: attMonth }),
+    ])
+      .then(([tch, stu]) => {
+        if (cancelled) return
+        setAttTeachers(tch.records)
+        setAttStudentDays(
+          stu.days.map((d) => ({
+            attendance_date: d.attendance_date,
+            boys_present: d.boys_present,
+            girls_present: d.girls_present,
+          })),
+        )
+        setAttTotals({
+          boys_present_sum: stu.totals.boys_present_sum ?? 0,
+          girls_present_sum: stu.totals.girls_present_sum ?? 0,
+          days_recorded: stu.totals.days_recorded ?? stu.days.length,
+        })
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAttTeachers([])
+          setAttStudentDays([])
+          setAttTotals({ boys_present_sum: 0, girls_present_sum: 0, days_recorded: 0 })
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setAttBusy(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [schoolId, attMonth, isGovernment, isDeoUser])
 
   const handleDeleteSchool = async () => {
     if (!schoolId || !window.confirm('Delete this school and related enrollment/teachers?')) return
@@ -311,13 +366,81 @@ export function SchoolDetailPage() {
         </div>
       </section>
 
+      {isGovernment || isDeoUser ? (
+        <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-text-primary">Attendance (read-only)</h2>
+              <p className="mt-1 text-xs text-text-muted">Monthly teacher marks and student daily aggregates for this school.</p>
+            </div>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-text-secondary">Month</span>
+              <input
+                type="month"
+                value={attMonth}
+                onChange={(e) => setAttMonth(e.target.value)}
+                className="rounded-lg border border-muted-surface px-3 py-2 text-sm"
+              />
+            </label>
+          </div>
+          {attBusy ? <p className="text-sm text-text-muted">Loading attendance…</p> : null}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">Teachers</h3>
+              <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-muted-surface">
+                <table className="min-w-full text-left text-xs">
+                  <thead className="bg-muted-surface/40 text-text-muted">
+                    <tr>
+                      <th className="px-2 py-1">Date</th>
+                      <th className="px-2 py-1">Teacher</th>
+                      <th className="px-2 py-1">Present</th>
+                      <th className="px-2 py-1">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {attTeachers.map((r) => (
+                      <tr key={r.id} className="border-t border-muted-surface">
+                        <td className="px-2 py-1 font-mono">{r.attendance_date}</td>
+                        <td className="px-2 py-1">{r.teacher_name ?? r.teacher_id}</td>
+                        <td className="px-2 py-1">{r.present ? 'yes' : 'no'}</td>
+                        <td className="px-2 py-1">{r.approval_status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {attTeachers.length === 0 && !attBusy ? (
+                  <p className="px-2 py-3 text-text-muted">No teacher rows this month.</p>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-text-primary">Students (aggregates)</h3>
+              <p className="mt-1 text-xs text-text-secondary">
+                Boys present sum {attTotals.boys_present_sum} · Girls present sum {attTotals.girls_present_sum} · Days{' '}
+                {attTotals.days_recorded}
+              </p>
+              <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto font-mono text-xs">
+                {attStudentDays.map((d) => (
+                  <li key={d.attendance_date}>
+                    {d.attendance_date} · boys {d.boys_present} · girls {d.girls_present}
+                  </li>
+                ))}
+              </ul>
+              {attStudentDays.length === 0 && !attBusy ? (
+                <p className="mt-2 text-text-muted">No student aggregates this month.</p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold text-text-primary">Classroom observations</h2>
             <p className="mt-1 text-xs text-text-muted">Latest observations captured during monitoring visits for this school.</p>
           </div>
-          {(user?.role === 'enumerator' || user?.role === 'deo') && schoolId ? (
+          {(user?.role === 'enumerator' || user?.role === 'deo' || user?.role === 'principal') && schoolId ? (
             <Link to="/dashboard/observations" className="text-sm font-semibold text-secondary hover:text-primary">
               Full list →
             </Link>

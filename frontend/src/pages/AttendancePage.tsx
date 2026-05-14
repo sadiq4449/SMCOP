@@ -4,6 +4,7 @@ import type { FormEvent } from 'react'
 import { useAuth } from '../context/AuthContext'
 import {
   downloadAttendanceExport,
+  downloadAttendanceExportXlsx,
   monthlyStudentAttendance,
   monthlyTeacherAttendance,
   reviewTeacherAttendance,
@@ -135,7 +136,7 @@ export function AttendancePage() {
       <header>
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Attendance</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">School attendance</h1>
-        <p className="mt-1 text-sm text-text-muted">Approve teacher marks, record student aggregates, export CSV.</p>
+        <p className="mt-1 text-sm text-text-muted">Approve teacher marks, record student aggregates, export CSV or Excel.</p>
       </header>
 
       {error ? (
@@ -208,6 +209,22 @@ export function AttendancePage() {
             className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
           >
             Export student CSV
+          </button>
+          <button
+            type="button"
+            disabled={!schoolId.trim() || loading}
+            onClick={() => void downloadAttendanceExportXlsx({ school_id: schoolId.trim(), month, kind: 'teacher' })}
+            className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
+          >
+            Export teacher Excel
+          </button>
+          <button
+            type="button"
+            disabled={!schoolId.trim() || loading}
+            onClick={() => void downloadAttendanceExportXlsx({ school_id: schoolId.trim(), month, kind: 'student' })}
+            className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
+          >
+            Export student Excel
           </button>
         </div>
       </section>

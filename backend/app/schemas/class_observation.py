@@ -46,6 +46,7 @@ class ClassroomObservationPatch(BaseModel):
 class ClassroomObservationOut(BaseModel):
     id: str
     visit_id: str
+    visit_status: str
     school_id: str
     quarter: str
     teacher_id: str | None

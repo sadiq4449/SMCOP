@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
-import { listObservations } from '../services/observationsApi'
+import { listObservations, patchObservation } from '../services/observationsApi'
 import { downloadDocument } from '../services/visitsApi'
 import type { ClassroomObservation } from '../types/observation'
 
@@ -13,8 +13,11 @@ export function ObservationsPage() {
   const [items, setItems] = useState<ClassroomObservation[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [reviewDrafts, setReviewDrafts] = useState<Record<string, string>>({})
+  const [savingId, setSavingId] = useState<string | null>(null)
 
   const assigned = useMemo(() => user?.assigned_schools ?? [], [user?.assigned_schools])
+  const isDeo = user?.role === 'deo'
 
   const load = async () => {
     setLoading(true)
@@ -30,6 +33,22 @@ export function ObservationsPage() {
       setError(e instanceof Error ? e.message : 'Failed to load observations')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const saveReviewerComments = async (observationId: string) => {
+    const obs = items.find((i) => i.id === observationId)
+    const raw =
+      reviewDrafts[observationId] !== undefined ? reviewDrafts[observationId] : (obs?.reviewer_comments ?? '')
+    setSavingId(observationId)
+    setError(null)
+    try {
+      await patchObservation(observationId, { reviewer_comments: raw.trim() ? raw.trim() : null })
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save reviewer comments')
+    } finally {
+      setSavingId(null)
     }
   }
 
@@ -120,6 +139,7 @@ export function ObservationsPage() {
                   </p>
                   <p className="text-xs text-text-muted">
                     Teacher {o.teacher_name ?? o.teacher_id ?? '—'} · Quarter {o.quarter}
+                    {o.visit_status ? ` · Visit ${o.visit_status}` : ''}
                   </p>
                 </div>
                 <Link
@@ -132,8 +152,31 @@ export function ObservationsPage() {
               <p className="mt-2 text-xs text-text-secondary">
                 Engagement {o.score_engagement} · Pedagogy {o.score_pedagogy} · Environment {o.score_environment}
               </p>
-              {o.reviewer_comments ? (
+              {o.reviewer_comments && !isDeo ? (
                 <p className="mt-2 text-xs text-secondary">DEO notes: {o.reviewer_comments}</p>
+              ) : null}
+              {isDeo && (o.visit_status ?? 'draft') === 'finalized' ? (
+                <div className="mt-3 space-y-2 rounded-lg border border-muted-surface bg-surface px-3 py-2">
+                  <label className="block text-xs font-medium text-text-secondary">District review (DEO)</label>
+                  <textarea
+                    value={reviewDrafts[o.id] ?? o.reviewer_comments ?? ''}
+                    onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [o.id]: e.target.value }))}
+                    rows={3}
+                    className="w-full rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                    placeholder="Add or update reviewer comments for this observation…"
+                  />
+                  <button
+                    type="button"
+                    disabled={loading || savingId === o.id}
+                    onClick={() => void saveReviewerComments(o.id)}
+                    className="rounded-lg bg-secondary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+                  >
+                    {savingId === o.id ? 'Saving…' : 'Save review notes'}
+                  </button>
+                </div>
+              ) : null}
+              {isDeo && (o.visit_status ?? 'draft') !== 'finalized' ? (
+                <p className="mt-2 text-xs text-text-muted">District review notes can be saved after this visit is finalized.</p>
               ) : null}
               <ul className="mt-3 space-y-1 text-xs">
                 {o.documents.map((d) => (

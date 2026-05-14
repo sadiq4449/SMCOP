@@ -83,3 +83,37 @@ class CompareSchoolMetrics(BaseModel):
 class CompareReportsOut(BaseModel):
     quarter: str
     schools: list[CompareSchoolMetrics]
+
+
+class CompareDistrictMetrics(BaseModel):
+    district_id: str
+    district_name: str | None
+    quarter: str
+    school_count: int
+    visits_recorded: int
+    avg_aggregate_score: float | None
+    classroom_observations_total: int
+    approved_reports_count: int
+
+
+class CompareDistrictsOut(BaseModel):
+    quarter: str
+    districts: list[CompareDistrictMetrics]
+
+
+class CompareQuarterMetrics(BaseModel):
+    school_id: str
+    school_name: str | None
+    quarter: str
+    visit_found: bool
+    visit_status: str | None
+    aggregate_score: float | None
+    classroom_observation_count: int | None
+    report_status: str | None
+    report_id: str | None
+
+
+class CompareQuartersOut(BaseModel):
+    school_id: str
+    school_name: str | None
+    quarters: list[CompareQuarterMetrics]

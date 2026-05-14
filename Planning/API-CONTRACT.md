@@ -240,7 +240,31 @@ Request
 }
 GET /reports?school_id=44&quarter=Q1-2026
 
-Get report.
+List/filter reports.
+
+GET /reports/{id}
+
+Single report (detail).
+
+GET /reports/compare?quarter=Q1-2026&school_ids=<comma-separated school UUIDs>
+
+School-vs-school metrics for one quarter (visibility matches school/report read scope).
+
+GET /reports/compare/districts?quarter=Q1-2026&district_ids=<comma-separated district UUIDs>
+
+District roll-ups for one quarter (Government and Super Admin only).
+
+GET /reports/compare/quarters?school_id=<uuid>&quarters=Q1-2026,Q2-2026
+
+Quarter-over-quarter metrics for one school.
+
+PATCH /reports/{id}
+
+Draft body edits; submit draft → submitted. Reopen rejected → draft (Super Admin only). Approve/reject only via PATCH /reports/{id}/status when the report is already submitted.
+
+GET /reports/{id}/export?format=pdf|xlsx
+
+Download export (authorized roles only).
 
 PATCH /reports/{id}/status
 

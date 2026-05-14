@@ -9,6 +9,7 @@ export interface ObservationDoc {
 export interface ClassroomObservation {
   id: string
   visit_id: string
+  visit_status?: string
   school_id: string
   quarter: string
   teacher_id: string | null

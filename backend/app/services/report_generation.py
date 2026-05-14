@@ -10,8 +10,9 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.attendance import StudentDailyAttendance, TeacherAttendance, TeacherAttendanceApprovalStatus
+from app.models.geography import District, Taluka, UnionCouncil
 from app.models.monitoring import ClassroomObservation, KpiScore, Visit
-from app.models.report import Report
+from app.models.report import Report, ReportStatus
 from app.models.school import School
 
 _Q_RE = re.compile(r"^Q([1-4])-(\d{4})$", re.IGNORECASE)
@@ -125,6 +126,79 @@ def build_snapshot(db: Session, *, school_id: UUID, quarter: str) -> tuple[dict,
         },
     }
     return snapshot, visit.id
+
+
+def compare_district_metrics(db: Session, district_ids: list[UUID], quarter: str) -> list[dict]:
+    """Roll up visit/KPI/observation/report signals per district for one quarter."""
+    norm = normalize_quarter(quarter)
+    rows: list[dict] = []
+    for did in district_ids:
+        dist = db.get(District, did)
+        uc_subq = select(UnionCouncil.id).join(Taluka).where(Taluka.district_id == did)
+        school_ids = list(db.scalars(select(School.id).where(School.uc_id.in_(uc_subq))).all())
+
+        scores: list[float] = []
+        obs_total = 0
+        visits_found = 0
+        for sid in school_ids:
+            snap, _vid = build_snapshot(db, school_id=sid, quarter=norm)
+            if snap.get("visit_found"):
+                visits_found += 1
+                agg = snap.get("aggregate_score")
+                if agg is not None:
+                    scores.append(float(agg))
+                obs_total += int(snap.get("classroom_observation_count") or 0)
+
+        rep_approved = db.scalar(
+            select(func.count(Report.id))
+            .select_from(Report)
+            .join(School, Report.school_id == School.id)
+            .join(UnionCouncil, School.uc_id == UnionCouncil.id)
+            .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
+            .where(
+                Taluka.district_id == did,
+                Report.quarter == norm,
+                Report.status == ReportStatus.APPROVED,
+            ),
+        ) or 0
+
+        avg_score = sum(scores) / len(scores) if scores else None
+        rows.append(
+            {
+                "district_id": str(did),
+                "district_name": dist.name if dist else None,
+                "quarter": norm,
+                "school_count": len(school_ids),
+                "visits_recorded": visits_found,
+                "avg_aggregate_score": round(avg_score, 4) if avg_score is not None else None,
+                "classroom_observations_total": obs_total,
+                "approved_reports_count": int(rep_approved),
+            },
+        )
+    return rows
+
+
+def compare_school_across_quarters(db: Session, school_id: UUID, quarters: list[str]) -> list[dict]:
+    """Same school across multiple quarters (quarter-vs-quarter)."""
+    rows: list[dict] = []
+    for q in quarters:
+        norm = normalize_quarter(q)
+        snap, _vid = build_snapshot(db, school_id=school_id, quarter=norm)
+        rep = db.scalar(select(Report).where(Report.school_id == school_id, Report.quarter == norm))
+        vf = bool(snap.get("visit_found"))
+        rows.append(
+            {
+                "school_id": str(school_id),
+                "quarter": norm,
+                "visit_found": vf,
+                "visit_status": snap.get("visit_status") if vf else None,
+                "aggregate_score": snap.get("aggregate_score") if vf else None,
+                "classroom_observation_count": snap.get("classroom_observation_count") if vf else None,
+                "report_status": rep.status.value if rep else None,
+                "report_id": str(rep.id) if rep else None,
+            },
+        )
+    return rows
 
 
 def compare_school_metrics(db: Session, school_ids: list[UUID], quarter: str) -> list[dict]:

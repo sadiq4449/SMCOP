@@ -99,6 +99,7 @@ def _serialize(obs: ClassroomObservation, visit: Visit) -> ClassroomObservationO
     return ClassroomObservationOut(
         id=str(obs.id),
         visit_id=str(obs.visit_id),
+        visit_status=visit.status.value,
         school_id=str(visit.school_id),
         quarter=visit.quarter,
         teacher_id=str(obs.teacher_id) if obs.teacher_id else None,

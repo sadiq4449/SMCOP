@@ -1,5 +1,7 @@
 import type { ApiResponse } from '../types/auth'
 import type {
+  CompareDistrictsResult,
+  CompareQuartersResult,
   CompareReportsResult,
   PaginatedReports,
   ReportComment,
@@ -61,6 +63,22 @@ export async function listReportComments(id: string): Promise<ReportComment[]> {
 export async function addReportComment(id: string, body: string): Promise<ReportComment> {
   const { data } = await apiClient.post<ApiResponse<ReportComment>>(`/reports/${id}/comments`, {
     body,
+  })
+  if (!data.success || !data.data) throw new Error(data.message)
+  return data.data
+}
+
+export async function compareDistricts(quarter: string, districtIdsCsv: string) {
+  const { data } = await apiClient.get<ApiResponse<CompareDistrictsResult>>('/reports/compare/districts', {
+    params: { quarter, district_ids: districtIdsCsv },
+  })
+  if (!data.success || !data.data) throw new Error(data.message)
+  return data.data
+}
+
+export async function compareQuarters(schoolId: string, quartersCsv: string) {
+  const { data } = await apiClient.get<ApiResponse<CompareQuartersResult>>('/reports/compare/quarters', {
+    params: { school_id: schoolId, quarters: quartersCsv },
   })
   if (!data.success || !data.data) throw new Error(data.message)
   return data.data
