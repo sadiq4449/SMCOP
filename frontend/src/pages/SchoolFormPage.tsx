@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import { getApiErrorMessage } from '../services/api'
 import {
   createSchool,
   getDistricts,
@@ -52,7 +53,7 @@ export function SchoolFormPage() {
         setDistricts(d)
         setPartners(p)
       })
-      .catch(() => setError('Failed to load reference data'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load reference data')))
   }, [])
 
   useEffect(() => {

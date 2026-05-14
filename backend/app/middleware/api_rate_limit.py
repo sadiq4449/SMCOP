@@ -43,6 +43,9 @@ class ApiRateLimitMiddleware(BaseHTTPMiddleware):
         now = time.time()
         window = 60.0
 
+        if request.method in ("OPTIONS", "HEAD"):
+            return await call_next(request)
+
         if path.rstrip("/").endswith("/auth/login") and request.method == "POST":
             lim = max(1, settings.login_rate_limit_per_minute)
             dq = self._login[ip]

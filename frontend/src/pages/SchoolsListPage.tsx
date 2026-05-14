@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
-import type { UserRole } from '../types/auth'
-import type { District, SchoolSummary, Taluka, UnionCouncil } from '../types/school'
+import { getApiErrorMessage } from '../services/api'
 import { getDistricts, getSchools, getTalukas, getUnionCouncils } from '../services/schoolsApi'
+import type { UserRole } from '../types/auth'
+import type { District, PaginatedSchools, SchoolSummary, Taluka, UnionCouncil } from '../types/school'
 
 const schoolRoles: UserRole[] = ['super_admin', 'government', 'deo', 'enumerator', 'principal']
 
@@ -29,7 +30,7 @@ export function SchoolsListPage() {
     if (!canAccess) return
     void getDistricts()
       .then(setDistricts)
-      .catch(() => setError('Failed to load districts'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load districts')))
   }, [canAccess])
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export function SchoolsListPage() {
       q: search.trim() || undefined,
       limit: 100,
     })
-      .then((res) => {
+      .then((res: PaginatedSchools) => {
         setItems(res.items)
         setTotal(res.total)
       })

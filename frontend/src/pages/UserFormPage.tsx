@@ -4,6 +4,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import { getDistricts, getPartnerOrgs, getSchools } from '../services/schoolsApi'
 import { createUser, getUser, updateUser } from '../services/usersApi'
 import type { UserRole } from '../types/auth'
@@ -52,7 +53,7 @@ export function UserFormPage() {
         setDistricts(d)
         setPartners(p)
       })
-      .catch(() => setError('Failed to load reference data'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load reference data')))
   }, [user?.role])
 
   useEffect(() => {

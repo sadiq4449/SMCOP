@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom'
 
 import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
-import { deleteUser, listUsers } from '../services/usersApi'
+import { getApiErrorMessage } from '../services/api'
 import { getDistricts, getPartnerOrgs } from '../services/schoolsApi'
+import { deleteUser, listUsers } from '../services/usersApi'
 import type { UserRole } from '../types/auth'
 import type { District, PartnerOrg } from '../types/school'
-import type { UserAdminRow } from '../types/user'
+import type { PaginatedUsers, UserAdminRow } from '../types/user'
 
 const ROLE_OPTIONS: UserRole[] = [
   'super_admin',
@@ -42,7 +43,7 @@ export function UsersListPage() {
       partner_org_id: partnerFilter || undefined,
       q: search.trim() || undefined,
     })
-      .then((res) => {
+      .then((res: PaginatedUsers) => {
         setItems(res.items)
         setTotal(res.total)
       })
@@ -50,12 +51,20 @@ export function UsersListPage() {
 
   useEffect(() => {
     if (user?.role !== 'super_admin') return
-    void getDistricts()
-      .then(setDistricts)
-      .catch(() => setError('Failed to load districts'))
-    void getPartnerOrgs()
-      .then(setPartners)
-      .catch(() => setError('Failed to load partner organizations'))
+    let cancelled = false
+    void Promise.all([getDistricts(), getPartnerOrgs()])
+      .then(([d, p]) => {
+        if (!cancelled) {
+          setDistricts(d)
+          setPartners(p)
+        }
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setError(getApiErrorMessage(e, 'Failed to load districts or partner organizations'))
+      })
+    return () => {
+      cancelled = true
+    }
   }, [user?.role])
 
   useEffect(() => {

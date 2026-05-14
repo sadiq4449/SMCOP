@@ -43,7 +43,7 @@ export function GovernmentSchoolReportsPage() {
     if (user?.role !== 'government') return
     void getDistricts()
       .then(setDistricts)
-      .catch(() => setError('Could not load districts'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Could not load districts')))
   }, [user])
 
   const reload = useCallback(async () => {

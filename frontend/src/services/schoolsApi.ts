@@ -1,4 +1,5 @@
 import type { ApiResponse } from '../types/auth'
+import { getApiErrorMessage } from './api'
 import type {
   District,
   EnrollmentRow,
@@ -13,9 +14,15 @@ import type {
 import { apiClient } from './api'
 
 export async function getDistricts(): Promise<District[]> {
-  const { data } = await apiClient.get<ApiResponse<District[]>>('/districts')
-  if (!data.success || !data.data) throw new Error(data.message)
-  return data.data
+  try {
+    const { data } = await apiClient.get<ApiResponse<District[]>>('/districts')
+    if (!data.success || data.data == null) {
+      throw new Error(data.message || 'Districts request failed')
+    }
+    return data.data
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e, 'Failed to load districts'))
+  }
 }
 
 export async function getTalukas(districtId: string): Promise<Taluka[]> {
@@ -69,9 +76,15 @@ export async function deleteSchool(id: string): Promise<void> {
 }
 
 export async function getPartnerOrgs(): Promise<PartnerOrg[]> {
-  const { data } = await apiClient.get<ApiResponse<PartnerOrg[]>>('/partner-orgs')
-  if (!data.success || !data.data) throw new Error(data.message)
-  return data.data
+  try {
+    const { data } = await apiClient.get<ApiResponse<PartnerOrg[]>>('/partner-orgs')
+    if (!data.success || data.data == null) {
+      throw new Error(data.message || 'Partner organizations request failed')
+    }
+    return data.data
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e, 'Failed to load partner organizations'))
+  }
 }
 
 export async function createPartnerOrg(body: Record<string, unknown>): Promise<PartnerOrg> {
