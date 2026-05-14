@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
+import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
 import {
   createSchool,
@@ -19,6 +20,7 @@ const GENDERS = ['boys', 'girls', 'mixed'] as const
 const STATUSES = ['active', 'inactive'] as const
 
 export function SchoolFormPage() {
+  const { user } = useAuth()
   const { schoolId } = useParams<{ schoolId?: string }>()
   const navigate = useNavigate()
   const isEdit = Boolean(schoolId)
@@ -48,13 +50,14 @@ export function SchoolFormPage() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    if (user?.role !== 'super_admin') return
     void Promise.all([getDistricts(), getPartnerOrgs()])
       .then(([d, p]) => {
         setDistricts(d)
         setPartners(p)
       })
       .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load reference data')))
-  }, [])
+  }, [user?.role])
 
   useEffect(() => {
     if (!districtId) {
@@ -76,6 +79,10 @@ export function SchoolFormPage() {
 
   useEffect(() => {
     if (!isEdit || !schoolId) return
+    if (user?.role !== 'super_admin') {
+      setLoading(false)
+      return
+    }
 
     let cancelled = false
     setLoading(true)
@@ -115,7 +122,18 @@ export function SchoolFormPage() {
     return () => {
       cancelled = true
     }
-  }, [isEdit, schoolId])
+  }, [isEdit, schoolId, user?.role])
+
+  if (user?.role !== 'super_admin') {
+    return (
+      <section className="rounded-2xl border border-muted-surface bg-surface p-6">
+        <p className="text-text-secondary">Creating and editing schools is restricted to Super Admin.</p>
+        <Link to="/dashboard/schools" className="mt-4 inline-block text-sm font-medium text-secondary hover:text-primary">
+          ← Back to schools
+        </Link>
+      </section>
+    )
+  }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()

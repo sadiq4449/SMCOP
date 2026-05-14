@@ -15,3 +15,10 @@ VALUES
 ON CONFLICT (email) DO NOTHING;
 
 COMMIT;
+
+-- Post-seed (optional): DEO and field roles need scope for non–super-admin APIs.
+-- After geography is seeded (districts table populated), assign a district to the demo DEO:
+--   UPDATE users SET district_id = (SELECT id FROM districts ORDER BY name LIMIT 1)
+--   WHERE email = 'deo@example.com';
+-- Assign schools to principal/enumerator/teacher via the admin UI or user_school_access
+-- so those accounts can open school detail and attendance flows.

@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
-import { getDistricts, getPartnerOrgs, getSchools } from '../services/schoolsApi'
+import { getDistricts, getPartnerOrgs, getSchool, getSchools } from '../services/schoolsApi'
 import { createUser, getUser, updateUser } from '../services/usersApi'
 import type { UserRole } from '../types/auth'
-import type { District, PartnerOrg, SchoolSummary } from '../types/school'
+import type { District, PartnerOrg, SchoolDetail, SchoolSummary } from '../types/school'
 
 const ROLE_OPTIONS: UserRole[] = [
   'super_admin',
@@ -20,6 +20,25 @@ const ROLE_OPTIONS: UserRole[] = [
 ]
 
 const SCHOOL_ROLES: UserRole[] = ['enumerator', 'principal', 'teacher']
+
+function schoolDetailToSummary(s: SchoolDetail): SchoolSummary {
+  return {
+    id: s.id,
+    emis_code: s.emis_code,
+    name: s.name,
+    uc_id: s.uc_id,
+    district_name: s.district_name,
+    taluka_name: s.taluka_name,
+    uc_name: s.uc_name,
+    level: s.level,
+    gender: s.gender,
+    partner_org_id: s.partner_org_id,
+    partner_org_name: s.partner_org_name,
+    principal_name: s.principal_name,
+    principal_phone: s.principal_phone,
+    status: s.status,
+  }
+}
 
 export function UserFormPage() {
   const { userId } = useParams<{ userId?: string }>()
@@ -41,6 +60,8 @@ export function UserFormPage() {
   const [districtId, setDistrictId] = useState('')
   const [linkedTeacherId, setLinkedTeacherId] = useState('')
   const [assignedSchoolIds, setAssignedSchoolIds] = useState<Set<string>>(() => new Set())
+  const assignedSchoolIdsRef = useRef(assignedSchoolIds)
+  assignedSchoolIdsRef.current = assignedSchoolIds
 
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
@@ -63,7 +84,18 @@ export function UserFormPage() {
     const h = window.setTimeout(() => {
       void getSchools({ q: schoolSearch.trim() || undefined, limit: 100 })
         .then((res) => {
-          if (!cancelled) setSchoolChoices(res.items)
+          if (!cancelled) {
+            setSchoolChoices((prev) => {
+              const fromSearch = new Map(res.items.map((s) => [s.id, s]))
+              const assigned = assignedSchoolIdsRef.current
+              for (const s of prev) {
+                if (assigned.has(s.id)) {
+                  fromSearch.set(s.id, s)
+                }
+              }
+              return [...fromSearch.values()]
+            })
+          }
         })
         .catch(() => {
           if (!cancelled) setError('Could not load schools')
@@ -81,7 +113,7 @@ export function UserFormPage() {
     setLoading(true)
     setError(null)
     void getUser(userId)
-      .then((u) => {
+      .then(async (u) => {
         if (cancelled) return
         setFullName(u.full_name)
         setEmail(u.email)
@@ -91,6 +123,25 @@ export function UserFormPage() {
         setDistrictId(u.district_id ?? '')
         setLinkedTeacherId(u.linked_teacher_id ?? '')
         setAssignedSchoolIds(new Set(u.assigned_schools))
+
+        const needsHydration = u.assigned_schools.length > 0 && SCHOOL_ROLES.includes(u.role)
+        if (!needsHydration) return
+
+        const summaries = (
+          await Promise.all(
+            u.assigned_schools.map((id) =>
+              getSchool(id)
+                .then(schoolDetailToSummary)
+                .catch(() => null),
+            ),
+          )
+        ).filter((x): x is SchoolSummary => x != null)
+        if (cancelled) return
+        setSchoolChoices((prev) => {
+          const merged = new Map(prev.map((s) => [s.id, s]))
+          for (const s of summaries) merged.set(s.id, s)
+          return [...merged.values()]
+        })
       })
       .catch(() => setError('Could not load user'))
       .finally(() => {
