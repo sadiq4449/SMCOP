@@ -36,6 +36,12 @@ from app.schemas.monitoring import (
 from app.services.audit import log_activity
 from app.services.evidence_storage import ALLOWED_IMAGE_EXT, save_visit_evidence_file
 from app.services.notify import notify_visit_finalized
+from app.services.visit_access import (
+    can_create_visit_for_school,
+    can_mutate_visit,
+    can_read_visit,
+    visit_select_filtered,
+)
 from app.services.visit_scoring import recompute_visit_aggregate
 
 router = APIRouter(prefix="/visits", tags=["visits"])
