@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.school import ActiveStatus, SchoolGender, SchoolLevel, TeacherGender
@@ -81,8 +83,8 @@ class PaginatedSchools(BaseModel):
 class EnrollmentOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    school_id: str
+    id: UUID
+    school_id: UUID
     quarter: str
     boys: int
     girls: int
@@ -103,8 +105,8 @@ class EnrollmentUpdate(BaseModel):
 class TeacherOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    school_id: str
+    id: UUID
+    school_id: UUID
     name: str
     gender: str
     subject: str | None

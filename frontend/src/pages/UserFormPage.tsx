@@ -66,15 +66,23 @@ export function UserFormPage() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [districtsError, setDistrictsError] = useState<string | null>(null)
+  const [partnersError, setPartnersError] = useState<string | null>(null)
 
   useEffect(() => {
     if (user?.role !== 'super_admin') return
-    void Promise.all([getDistricts(), getPartnerOrgs()])
-      .then(([d, p]) => {
-        setDistricts(d)
-        setPartners(p)
-      })
-      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load reference data')))
+    setDistrictsError(null)
+    void getDistricts()
+      .then(setDistricts)
+      .catch((e: unknown) => setDistrictsError(getApiErrorMessage(e, 'Failed to load districts')))
+  }, [user?.role])
+
+  useEffect(() => {
+    if (user?.role !== 'super_admin') return
+    setPartnersError(null)
+    void getPartnerOrgs()
+      .then(setPartners)
+      .catch((e: unknown) => setPartnersError(getApiErrorMessage(e, 'Failed to load partner organizations')))
   }, [user?.role])
 
   useEffect(() => {
@@ -249,10 +257,18 @@ export function UserFormPage() {
         </p>
       </header>
 
-      {error ? (
-        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
-          {error}
-        </p>
+      {error || districtsError || partnersError ? (
+        <div className="space-y-2" role="alert">
+          {error ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
+          ) : null}
+          {districtsError ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{districtsError}</p>
+          ) : null}
+          {partnersError ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{partnersError}</p>
+          ) : null}
+        </div>
       ) : null}
 
       <form onSubmit={(e) => void handleSubmit(e)} className="space-y-6 rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">

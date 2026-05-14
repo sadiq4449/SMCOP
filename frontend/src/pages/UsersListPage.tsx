@@ -27,6 +27,8 @@ export function UsersListPage() {
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [districtsLoadError, setDistrictsLoadError] = useState<string | null>(null)
+  const [partnersLoadError, setPartnersLoadError] = useState<string | null>(null)
 
   const [roleFilter, setRoleFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
@@ -52,15 +54,29 @@ export function UsersListPage() {
   useEffect(() => {
     if (user?.role !== 'super_admin') return
     let cancelled = false
-    void Promise.all([getDistricts(), getPartnerOrgs()])
-      .then(([d, p]) => {
-        if (!cancelled) {
-          setDistricts(d)
-          setPartners(p)
-        }
+    setDistrictsLoadError(null)
+    void getDistricts()
+      .then((d) => {
+        if (!cancelled) setDistricts(d)
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(getApiErrorMessage(e, 'Failed to load districts or partner organizations'))
+        if (!cancelled) setDistrictsLoadError(getApiErrorMessage(e, 'Failed to load districts'))
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.role])
+
+  useEffect(() => {
+    if (user?.role !== 'super_admin') return
+    let cancelled = false
+    setPartnersLoadError(null)
+    void getPartnerOrgs()
+      .then((p) => {
+        if (!cancelled) setPartners(p)
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setPartnersLoadError(getApiErrorMessage(e, 'Failed to load partner organizations'))
       })
     return () => {
       cancelled = true
@@ -180,10 +196,18 @@ export function UsersListPage() {
         </label>
       </section>
 
-      {error ? (
-        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
-          {error}
-        </p>
+      {error || districtsLoadError || partnersLoadError ? (
+        <div className="space-y-2" role="alert">
+          {error ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
+          ) : null}
+          {districtsLoadError ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{districtsLoadError}</p>
+          ) : null}
+          {partnersLoadError ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{partnersLoadError}</p>
+          ) : null}
+        </div>
       ) : null}
 
       <section className="overflow-hidden rounded-2xl border border-muted-surface bg-surface shadow-sm">
