@@ -86,9 +86,14 @@ def government_dashboard_payload(
     district_skip: int,
     district_limit: int,
 ) -> dict:
+    from app.models.issue import Issue, IssueStatus
+
     q = _norm_q(quarter)
     base = system_dashboard_payload(db, quarter=q, district_skip=district_skip, district_limit=district_limit)
-    base["issues"] = {"open_count": 0, "note": "Issue tracking ships in Iteration 9."}
+    open_cnt = db.scalar(
+        select(func.count(Issue.id)).where(Issue.status.in_((IssueStatus.OPEN, IssueStatus.ASSIGNED))),
+    ) or 0
+    base["issues"] = {"open_count": int(open_cnt)}
     return base
 
 

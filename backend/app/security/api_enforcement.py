@@ -1,4 +1,4 @@
-"""Role × API enforcement reference (Iterations 3–8).
+"""Role × API enforcement reference (Iterations 3–10).
 
 This module documents how access is implemented so reviewers can compare routes to
 the PRD matrix without spelunking every file.
@@ -48,6 +48,23 @@ Approve/reject (``PATCH /reports/{id}/status``) requires ``submitted`` status fo
 ``GET /dashboard/district``: ``DEO`` (implicit district) or ``GOVERNMENT``/``SUPER_ADMIN`` with ``district_id`` — pending work, low performers, facility gaps, school cards.
 ``GET /dashboard/school/{id}``: Super Admin, Government, DEO (school in district), Enumerator/Principal/Teacher with school access — attendance window, enrollment trend, visit/KPI history.
 Aggregations use indexed ``visits.school_id`` / ``visits.quarter`` / geography joins; no response caching yet (PRD p95 on representative data).
+
+**Issues & operations (Iteration 9)** — ``app.api.v1.issues``:
+Create/list scoped by ``school_access``; roles: Super Admin, Government, DEO, Enumerator, Principal.
+PATCH assignee or arbitrary status: Super Admin, DEO for schools in scope. Government cannot PATCH.
+Principal / assigned Enumerator may set status to resolved/closed when allowed by ``issue_access``.
+
+**Notifications** — ``app.api.v1.notifications``: authenticated user reads/updates only their rows.
+
+**Tasks** — ``app.api.v1.tasks``: create Super Admin + DEO; list scoped by school/assignee; completion by assignee, Super Admin, or DEO in district.
+
+**Announcements** — ``app.api.v1.announcements``: create Super Admin (optional national vs district) and DEO (district only); list filtered by viewer district/school scope.
+
+**Auth recovery (Iteration 10 subset)** — ``POST /auth/forgot-password`` and ``POST /auth/reset-password`` are public; transactional email is best-effort when ``SMTP_*`` and ``PUBLIC_APP_URL`` are set.
+
+**Webhooks (Iteration 10)** — ``/admin/webhooks`` Super Admin only; signed outbound POSTs from ``app.services.webhook_dispatch`` (non-blocking; subscribers should accept timeouts).
+
+**Rate limit** — ``app.middleware.api_rate_limit.ApiRateLimitMiddleware`` applies to all paths under ``API_V1_PREFIX`` (separate tighter bucket for ``POST .../auth/login``).
 
 
 PRD cross-check (API-CONTRACT §12)

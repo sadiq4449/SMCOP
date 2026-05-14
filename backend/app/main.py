@@ -19,6 +19,7 @@ from app.core.database import SessionLocal, engine, get_db
 from app.db.seed import seed_demo_users
 from app.db.seed_geo import seed_geography_and_partner
 from app.db.seed_monitoring import seed_kpis_if_empty
+from app.middleware.api_rate_limit import ApiRateLimitMiddleware
 from app.models import Base
 
 logger = logging.getLogger(__name__)
@@ -86,6 +87,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(ApiRateLimitMiddleware, api_prefix=settings.api_v1_prefix)
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -254,6 +257,12 @@ _SCHEMA_TABLES = (
     "kpi_scores",
     "infrastructure_checklist",
     "documents",
+    "issues",
+    "work_tasks",
+    "notifications",
+    "announcements",
+    "webhook_subscriptions",
+    "password_reset_tokens",
 )
 
 

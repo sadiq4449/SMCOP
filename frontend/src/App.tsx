@@ -9,16 +9,19 @@ import { AttendancePage } from './pages/AttendancePage'
 import { ClassAttendancePage } from './pages/ClassAttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ApiRoutingHintPage } from './pages/ApiRoutingHintPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { GovernmentSchoolReportsPage } from './pages/GovernmentSchoolReportsPage'
+import { IssuesPage } from './pages/IssuesPage'
 import { LoginPage } from './pages/LoginPage'
 import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
 import { MyAttendancePage } from './pages/MyAttendancePage'
 import { ObservationsPage } from './pages/ObservationsPage'
 import { PartnerOrgsPage } from './pages/PartnerOrgsPage'
-import { GovernmentSchoolReportsPage } from './pages/GovernmentSchoolReportsPage'
 import { PlaceholderPage } from './pages/PlaceholderPage'
 import { ReportApprovalsPage } from './pages/ReportApprovalsPage'
 import { ReportComparisonsPage } from './pages/ReportComparisonsPage'
 import { ReportsWorkspacePage } from './pages/ReportsWorkspacePage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SchoolDetailPage } from './pages/SchoolDetailPage'
 import { SchoolFormPage } from './pages/SchoolFormPage'
 import { SchoolsListPage } from './pages/SchoolsListPage'
@@ -32,6 +35,8 @@ function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/health/*" element={<ApiRoutingHintPage />} />
           <Route path="/docs/*" element={<ApiRoutingHintPage />} />
           <Route path="/docs" element={<ApiRoutingHintPage />} />
@@ -62,6 +67,7 @@ function App() {
               <Route path="/dashboard/monitoring" element={<MonitoringVisitsPage />} />
               <Route path="/dashboard/visits" element={<MonitoringVisitsPage />} />
               <Route path="/dashboard/assigned-schools" element={<AssignedSchoolsPage />} />
+              <Route path="/dashboard/issues" element={<IssuesPage />} />
               <Route path="/dashboard/observations" element={<ObservationsPage />} />
               <Route path="/dashboard/attendance" element={<AttendancePage />} />
               <Route path="/dashboard/timetable" element={<PlaceholderPage title="Timetable" />} />

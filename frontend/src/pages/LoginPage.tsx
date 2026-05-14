@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 
@@ -73,9 +73,15 @@ export function LoginPage() {
             disabled={isSubmitting}
             className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
           >
-            {isSubmitting ? 'Signing in...' : 'Sign in'}
+            {isSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
+
+        <p className="mt-4 text-center text-sm text-text-secondary">
+          <Link to="/forgot-password" className="text-secondary hover:underline">
+            Forgot password?
+          </Link>
+        </p>
 
         <div className="mt-6 rounded-lg bg-section p-4 text-sm text-text-muted">
           Demo users are seeded for each role. Example: <span className="text-text-secondary">superadmin@example.com</span> / <span className="text-text-secondary">Password123!</span>

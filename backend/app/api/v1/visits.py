@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -35,7 +35,7 @@ from app.schemas.monitoring import (
 )
 from app.services.audit import log_activity
 from app.services.evidence_storage import ALLOWED_IMAGE_EXT, save_visit_evidence_file
-from app.services.visit_access import can_create_visit_for_school, can_mutate_visit, can_read_visit, visit_select_filtered
+from app.services.notify import notify_visit_finalized
 from app.services.visit_scoring import recompute_visit_aggregate
 
 router = APIRouter(prefix="/visits", tags=["visits"])
@@ -276,6 +276,7 @@ def get_visit(
 def patch_visit(
     visit_id: UUID,
     payload: VisitPatch,
+    background_tasks: BackgroundTasks,
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[VisitDetail]:
@@ -362,6 +363,7 @@ def patch_visit(
             user_id=current_user.id,
             metadata={"school_id": str(visit.school_id), "quarter": visit.quarter},
         )
+        background_tasks.add_task(notify_visit_finalized, str(visit.id), str(visit.school_id))
 
     return APIResponse(success=True, message="Visit updated successfully", data=_visit_detail(db, visit))
 

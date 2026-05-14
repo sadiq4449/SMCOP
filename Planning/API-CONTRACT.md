@@ -198,9 +198,35 @@ View issues per school.
 
 PATCH /issues/{id}
 
-Change status → open, assigned, resolved, closed.
+Change status → open, assigned, resolved, closed; optional `assigned_to_user_id` (Super Admin / DEO). Government may create and list issues but cannot PATCH.
 
-10. Analytics & Dashboard APIs
+9b. Notifications (Iteration 9)
+GET /notifications/unread-count
+GET /notifications?unread_only=&skip=&limit=
+PATCH /notifications/{id}/read
+POST /notifications/mark-all-read
+
+9c. Operational tasks (Iteration 9)
+POST /tasks — Super Admin, DEO (principal/teacher assignees within school scope)
+GET /tasks?school_id=
+PATCH /tasks/{id} — complete or edit (by assignee or author per rules)
+
+9d. Announcements (Iteration 9)
+POST /announcements — Super Admin (optional `district_id` for district broadcast), DEO (own district only)
+GET /announcements
+
+9e. Password recovery (Iteration 10 subset)
+POST /auth/forgot-password `{ "email": "..." }` — always masked success; sends email when SMTP is configured (`SMTP_HOST`, `PUBLIC_APP_URL`).
+POST /auth/reset-password `{ "token": "...", "password": "..." }`
+
+9f. Webhooks (Iteration 10)
+POST /admin/webhooks `{ "url": "https://...", "events": ["report_approved","visit_submitted","issue_resolved"] }` — Super Admin; response includes `secret` once.
+GET /admin/webhooks
+DELETE /admin/webhooks/{id}
+
+Signed delivery: JSON body `{"event","occurred_at","data"}` with headers `X-SMOCP-Event`, `X-SMOCP-Signature: sha256=<hmac>` using the subscription secret.
+
+API routes under `API_V1_PREFIX` are rate-limited per client IP (env `API_RATE_LIMIT_PER_MINUTE`, stricter `LOGIN_RATE_LIMIT_PER_MINUTE` for `POST .../auth/login`).
 For Super Admin:
 GET /dashboard/system
 
@@ -211,7 +237,7 @@ total schools, visit counts (draft/finalized), optional quarter filter, paginate
 For Government (read-only):
 GET /dashboard/government
 
-National roll-up + paginated districts; issues summary reserved for Iteration 9.
+National roll-up + paginated districts; `issues.open_count` counts open + assigned issues nationally.
 
 For DEO:
 GET /dashboard/district?quarter=
@@ -282,7 +308,7 @@ IE Enumerator	Visits, KPI, Observation	Cannot modify schools/users
 Principal	Attendance, issues	Cannot see other schools
 Teacher	Classroom attendance	No admin access
 DEO	District-level data, approve reports	Cannot modify schools/users
-Gov User	Read-only dashboards + reports	No edit/delete allowed
+Gov User	Read-heavy dashboards, reports, issues (create/list), notifications, announcements, tasks list	No PATCH on issues; no report body writes; no school/user mutations
 13. Error Codes
 Code	Meaning
 400	Validation error
@@ -297,10 +323,6 @@ Strict role-based middleware
 File upload scanning
 Password hashing
 Audit logging for all modifications
-15. Webhooks (Optional Future Feature)
+15. Webhooks (implemented)
 
-Example:
-
-report_approved
-visit_submitted
-issue_resolved
+Events: `report_approved`, `visit_submitted`, `issue_resolved`. Configure via `/admin/webhooks` (Super Admin). HTTP POST to subscriber URL; verification via `X-SMOCP-Signature` HMAC-SHA256 of the raw JSON body with the subscription secret.

@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
@@ -40,7 +40,7 @@ from app.services.report_access import (
     reports_select_filtered,
     user_can_view_school_for_compare,
 )
-from app.services.report_export import report_to_pdf, report_to_xlsx
+from app.services.notify import notify_report_approved, notify_report_submitted
 from app.services.report_generation import (
     build_snapshot,
     compare_district_metrics,
@@ -336,6 +336,7 @@ def get_report(report_id: UUID, current_user: AuthUser, db: Session = Depends(ge
 def patch_report(
     report_id: UUID,
     payload: ReportPatch,
+    background_tasks: BackgroundTasks,
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[ReportOut]:
@@ -347,6 +348,8 @@ def patch_report(
         raise _not_found()
     if not can_read_report(db, current_user, report):
         raise _forbidden()
+
+    old_status = report.status
 
     data = payload.model_dump(exclude_unset=True)
 
@@ -394,6 +397,9 @@ def patch_report(
         metadata={"status": report.status.value},
     )
 
+    if old_status != ReportStatus.SUBMITTED and report.status == ReportStatus.SUBMITTED:
+        background_tasks.add_task(notify_report_submitted, str(report.id))
+
     return APIResponse(success=True, message="Report updated successfully", data=_report_out(report))
 
 
@@ -401,6 +407,7 @@ def patch_report(
 def review_report(
     report_id: UUID,
     payload: ReportReviewPatch,
+    background_tasks: BackgroundTasks,
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[ReportOut]:
@@ -434,6 +441,9 @@ def review_report(
         user_id=current_user.id,
         metadata={"decision": payload.status},
     )
+
+    if payload.status == "approved":
+        background_tasks.add_task(notify_report_approved, str(report.id))
 
     return APIResponse(success=True, message="Report review saved successfully", data=_report_out(report))
 

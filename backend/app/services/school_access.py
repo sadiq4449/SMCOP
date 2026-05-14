@@ -60,3 +60,14 @@ def user_can_access_school(db: Session, user: User, school_id: UUID) -> bool:
     if scope:
         stmt = stmt.where(*scope)
     return db.scalar(stmt) is not None
+
+
+def school_district_id(db: Session, school_id: UUID) -> UUID | None:
+    """Return the district id for a school's UC hierarchy, or None if missing."""
+    return db.scalar(
+        select(Taluka.district_id)
+        .select_from(School)
+        .join(UnionCouncil, School.uc_id == UnionCouncil.id)
+        .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
+        .where(School.id == school_id),
+    )

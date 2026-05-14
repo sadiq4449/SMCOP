@@ -1,21 +1,33 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.core.config import get_settings
 from app.core.database import get_db
 from app.core.security import (
     create_access_token,
     create_refresh_token,
     decode_token,
+    hash_password,
     verify_password,
 )
+from app.models.password_reset import PasswordResetToken
 from app.models.user import User, UserStatus
-from app.schemas.auth import LoginData, LoginRequest, LogoutRequest, RefreshData, RefreshRequest
+from app.schemas.auth import (
+    ForgotPasswordRequest,
+    LoginData,
+    LoginRequest,
+    LogoutRequest,
+    RefreshData,
+    RefreshRequest,
+    ResetPasswordRequest,
+)
 from app.schemas.common import APIResponse, UserPublic
 from app.services.audit import log_activity
+from app.services.mailer import send_email_best_effort
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -163,3 +175,66 @@ def logout(
         message="Logged out successfully",
         data={"status": "ok"},
     )
+
+
+@router.post("/forgot-password", response_model=APIResponse[dict[str, str]])
+def forgot_password(
+    payload: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+) -> APIResponse[dict[str, str]]:
+    settings = get_settings()
+    user = db.scalar(select(User).where(User.email == payload.email))
+    if user is not None and user.status == UserStatus.ACTIVE:
+        raw = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(raw.encode()).hexdigest()
+        expires = datetime.now(UTC) + timedelta(hours=1)
+        row = PasswordResetToken(user_id=user.id, token_hash=token_hash, expires_at=expires)
+        db.add(row)
+        db.commit()
+        link = f"{settings.public_app_url.rstrip('/')}/reset-password?token={raw}"
+        body = (
+            f"Use this link to reset your password (expires in one hour):\n{link}\n\n"
+            "If you did not request a reset, you can ignore this message."
+        )
+        background_tasks.add_task(send_email_best_effort, user.email, "Password reset — SMCOP", body)
+    return APIResponse(
+        success=True,
+        message="If an account exists for this email, reset instructions were sent.",
+        data={"status": "ok"},
+    )
+
+
+@router.post("/reset-password", response_model=APIResponse[dict[str, str]])
+def reset_password_endpoint(
+    payload: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+) -> APIResponse[dict[str, str]]:
+    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
+    row = db.scalar(
+        select(PasswordResetToken).where(
+            PasswordResetToken.token_hash == token_hash,
+            PasswordResetToken.used_at.is_(None),
+            PasswordResetToken.expires_at > datetime.now(UTC),
+        ),
+    )
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "Invalid or expired reset token",
+                "errors": {"token": "invalid"},
+            },
+        )
+    user = db.get(User, row.user_id)
+    if user is None or user.status != UserStatus.ACTIVE:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"success": False, "message": "Account unavailable", "errors": {"user": "inactive"}},
+        )
+    user.password_hash = hash_password(payload.password)
+    row.used_at = datetime.now(UTC)
+    db.commit()
+    log_activity(db, action="auth.password_reset_complete", target=str(user.id), user_id=user.id)
+    return APIResponse(success=True, message="Password updated. You can sign in with the new password.", data={"status": "ok"})

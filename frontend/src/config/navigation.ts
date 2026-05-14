@@ -7,9 +7,12 @@ export interface NavItem {
 
 const sharedDashboard: NavItem = { label: 'Dashboard', path: '/dashboard' }
 
+const opsNav: NavItem = { label: 'Issues & tasks', path: '/dashboard/issues' }
+
 const roleNavigation: Record<UserRole, NavItem[]> = {
   super_admin: [
     sharedDashboard,
+    opsNav,
     { label: 'Users', path: '/dashboard/users' },
     { label: 'Audit log', path: '/dashboard/audit-log' },
     { label: 'Schools', path: '/dashboard/schools' },
@@ -19,12 +22,14 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   ],
   government: [
     sharedDashboard,
+    opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'School Reports', path: '/dashboard/school-reports' },
     { label: 'Comparisons', path: '/dashboard/comparisons' },
   ],
   deo: [
     sharedDashboard,
+    opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Approvals', path: '/dashboard/approvals' },
     { label: 'Comparisons', path: '/dashboard/comparisons' },
@@ -33,6 +38,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   ],
   enumerator: [
     sharedDashboard,
+    opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Reports', path: '/dashboard/reports' },
     { label: 'Assigned Schools', path: '/dashboard/assigned-schools' },
@@ -41,6 +47,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   ],
   principal: [
     sharedDashboard,
+    opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Observations', path: '/dashboard/observations' },
     { label: 'Attendance', path: '/dashboard/attendance' },
@@ -49,6 +56,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
   ],
   teacher: [
     sharedDashboard,
+    opsNav,
     { label: 'My Attendance', path: '/dashboard/my-attendance' },
     { label: 'Class Attendance', path: '/dashboard/class-attendance' },
     { label: 'Timetable', path: '/dashboard/timetable' },

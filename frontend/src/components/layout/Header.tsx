@@ -1,3 +1,5 @@
+import { NotificationBell } from './NotificationBell'
+
 import { roleLabels } from '../../config/navigation'
 import type { UserProfile } from '../../types/auth'
 
@@ -15,15 +17,18 @@ export function Header({ user, onLogout }: HeaderProps) {
         <p className="text-sm text-text-secondary">{roleLabels[user.role]}</p>
       </div>
 
-      <button
-        type="button"
-        onClick={() => {
-          void onLogout()
-        }}
-        className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary"
-      >
-        Log out
-      </button>
+      <div className="flex items-center gap-3">
+        <NotificationBell />
+        <button
+          type="button"
+          onClick={() => {
+            void onLogout()
+          }}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-secondary"
+        >
+          Log out
+        </button>
+      </div>
     </header>
   )
 }

@@ -65,6 +65,30 @@ class Settings(BaseSettings):
     upload_dir: str = Field(default="uploads", validation_alias=AliasChoices("UPLOAD_DIR"))
     max_upload_mb: int = Field(default=12, validation_alias=AliasChoices("MAX_UPLOAD_MB"))
 
+    # Transactional email (optional)
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, validation_alias=AliasChoices("SMTP_PORT"))
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = Field(default="noreply@localhost", validation_alias=AliasChoices("SMTP_FROM"))
+    smtp_use_tls: bool = Field(default=True, validation_alias=AliasChoices("SMTP_USE_TLS"))
+
+    # Links in emails (password reset)
+    public_app_url: str = Field(
+        default="http://localhost:5173",
+        validation_alias=AliasChoices("PUBLIC_APP_URL", "FRONTEND_URL"),
+    )
+
+    # Rate limits (in-memory; per server instance — Iteration 10)
+    api_rate_limit_per_minute: int = Field(
+        default=180,
+        validation_alias=AliasChoices("API_RATE_LIMIT_PER_MINUTE"),
+    )
+    login_rate_limit_per_minute: int = Field(
+        default=20,
+        validation_alias=AliasChoices("LOGIN_RATE_LIMIT_PER_MINUTE"),
+    )
+
     @property
     def upload_root(self) -> Path:
         """Directory for evidence files (relative paths resolved under backend/)."""
