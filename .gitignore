@@ -33,6 +33,10 @@ Thumbs.db
 # Logs
 *.log
 
+# Vercel: production SPA copy (keep .gitkeep only)
+public/**
+!public/.gitkeep
+
 # Vercel
 .vercel
 

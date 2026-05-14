@@ -1,0 +1,8 @@
+{
+  "name": "smcop-vercel",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd frontend && npm install",
+    "build": "cd frontend && npm run build && cd .. && node -e \"const fs=require('fs'),path=require('path');const root=process.cwd();const pub=path.join(root,'public');fs.rmSync(pub,{recursive:true,force:true});fs.mkdirSync(pub,{recursive:true});fs.cpSync(path.join(root,'frontend','dist'),pub,{recursive:true})\""
+  }
+}
