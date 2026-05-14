@@ -206,26 +206,26 @@ GET /dashboard/system
 
 Returns:
 
-total schools
-total visits
-performance heatmap
-district-wise score breakdown
+total schools, visit counts (draft/finalized), optional quarter filter, paginated district completion/score breakdown, heatmap placeholder.
+
+For Government (read-only):
+GET /dashboard/government
+
+National roll-up + paginated districts; issues summary reserved for Iteration 9.
+
 For DEO:
-GET /dashboard/district
+GET /dashboard/district?quarter=
 
-Returns:
+District inferred from user. Pending draft visits, submitted reports queue, low performers, facility-gap schools, paginated school cards.
 
-district schools
-pending visits
-low-performing schools
-For Principal:
-GET /dashboard/school/{id}
+For Government or Super Admin (single district):
+GET /dashboard/district?district_id=<uuid>&quarter=
 
-Returns:
+For any role with school access:
+GET /dashboard/school/{id}?quarter=
 
-attendance
-monitoring visit history
-KPI trends
+Attendance aggregates for the quarter window (same calendar bounds as report snapshots), enrollment trend, recent visits, KPI trend series.
+
 11. Report Generation APIs
 POST /reports
 

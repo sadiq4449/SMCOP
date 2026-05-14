@@ -1,4 +1,4 @@
-"""Role × API enforcement reference (Iterations 3–7).
+"""Role × API enforcement reference (Iterations 3–8).
 
 This module documents how access is implemented so reviewers can compare routes to
 the PRD matrix without spelunking every file.
@@ -41,6 +41,14 @@ Government: read list/detail, ``POST/GET …/comments``, ``GET …/export`` only
 ``GET /reports/compare`` (schools, same quarter), ``GET /reports/compare/districts`` (Government/Super Admin),
 ``GET /reports/compare/quarters`` (one school, multiple quarters) use the same visibility rules as report reads where applicable.
 Approve/reject (``PATCH /reports/{id}/status``) requires ``submitted`` status for all roles including Super Admin.
+
+**Dashboard (Iteration 8)** — ``app.api.v1.dashboard`` (read-only):
+``GET /dashboard/system``: ``SUPER_ADMIN`` only — national totals + paginated district breakdown.
+``GET /dashboard/government``: ``GOVERNMENT`` only — same roll-ups plus issues placeholder; no mutations.
+``GET /dashboard/district``: ``DEO`` (implicit district) or ``GOVERNMENT``/``SUPER_ADMIN`` with ``district_id`` — pending work, low performers, facility gaps, school cards.
+``GET /dashboard/school/{id}``: Super Admin, Government, DEO (school in district), Enumerator/Principal/Teacher with school access — attendance window, enrollment trend, visit/KPI history.
+Aggregations use indexed ``visits.school_id`` / ``visits.quarter`` / geography joins; no response caching yet (PRD p95 on representative data).
+
 
 PRD cross-check (API-CONTRACT §12)
 ----------------------------------
