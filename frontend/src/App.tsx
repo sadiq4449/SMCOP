@@ -10,6 +10,7 @@ import { ClassAttendancePage } from './pages/ClassAttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ApiRoutingHintPage } from './pages/ApiRoutingHintPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { GeographyPage } from './pages/GeographyPage'
 import { GovernmentSchoolReportsPage } from './pages/GovernmentSchoolReportsPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { LoginPage } from './pages/LoginPage'
@@ -52,6 +53,7 @@ function App() {
               <Route path="/dashboard/users" element={<UsersListPage />} />
               <Route path="/dashboard/audit-log" element={<ActivityLogsPage />} />
               <Route path="/dashboard/partner-orgs" element={<PartnerOrgsPage />} />
+              <Route path="/dashboard/geography" element={<GeographyPage />} />
               <Route path="/dashboard/schools/new" element={<SchoolFormPage />} />
               <Route path="/dashboard/schools/:schoolId/edit" element={<SchoolFormPage />} />
               <Route path="/dashboard/schools/:schoolId" element={<SchoolDetailPage />} />

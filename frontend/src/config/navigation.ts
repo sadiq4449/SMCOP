@@ -17,6 +17,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Audit log', path: '/dashboard/audit-log' },
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Partner orgs', path: '/dashboard/partner-orgs' },
+    { label: 'Geography', path: '/dashboard/geography' },
     { label: 'Reports', path: '/dashboard/reports' },
     { label: 'Settings', path: '/dashboard/settings' },
   ],

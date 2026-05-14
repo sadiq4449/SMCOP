@@ -15,7 +15,9 @@ Mutations call ``app.services.audit.log_activity`` with structured metadata.
       - ``DEO``: schools whose UC lies in ``users.district_id`` (no rows if unset).
       - ``ENUMERATOR``, ``PRINCIPAL``, ``TEACHER``: intersection with ``assigned_schools``.
 
-**Geography** — ``GET /ucs/{uc_id}/schools`` applies the same read scope as the schools list.
+**Geography** — ``GET`` district/taluka/UC listing: authenticated.
+``POST/PATCH/DELETE`` districts, talukas, and union councils: ``SUPER_ADMIN`` only (cannot delete nodes that still have schools under them).
+``GET /ucs/{uc_id}/schools`` applies the same read scope as the schools list.
 
 **Auth** — ``app.api.v1.auth``: login and refresh reject ``inactive`` users (401).
 
