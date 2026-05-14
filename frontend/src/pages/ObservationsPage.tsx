@@ -2,9 +2,11 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import { listObservations, patchObservation } from '../services/observationsApi'
 import { downloadDocument } from '../services/visitsApi'
 import type { ClassroomObservation } from '../types/observation'
+import { normalizeQuarterInput } from '../utils/quarter'
 
 export function ObservationsPage() {
   const { user } = useAuth()
@@ -23,14 +25,15 @@ export function ObservationsPage() {
     setLoading(true)
     setError(null)
     try {
+      const q = normalizeQuarterInput(quarter)
       const res = await listObservations({
         school_id: schoolId.trim() || undefined,
-        quarter: quarter.trim() || undefined,
+        quarter: q || undefined,
         limit: 100,
       })
       setItems(res.items)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load observations')
+      setError(getApiErrorMessage(e, 'Failed to load observations'))
     } finally {
       setLoading(false)
     }
@@ -46,7 +49,7 @@ export function ObservationsPage() {
       await patchObservation(observationId, { reviewer_comments: raw.trim() ? raw.trim() : null })
       await load()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not save reviewer comments')
+      setError(getApiErrorMessage(e, 'Could not save reviewer comments'))
     } finally {
       setSavingId(null)
     }

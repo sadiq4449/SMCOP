@@ -1,6 +1,6 @@
-import axios, { type AxiosError } from 'axios'
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
-import type { ApiResponse } from '../types/auth'
+import type { ApiResponse, RefreshResponseData } from '../types/auth'
 
 /**
  * Resolved API base URL. On Vercel, the SPA must not POST to "/" or "/auth/*" —
@@ -40,6 +40,78 @@ export const apiClient = axios.create({
     'Content-Type': 'application/json',
   },
 })
+
+/** Kept in sync with AuthContext localStorage keys. */
+const ACCESS_TOKEN_KEY = 'smocp_access_token'
+const REFRESH_TOKEN_KEY = 'smocp_refresh_token'
+
+export const SESSION_EXPIRED_EVENT = 'smocp:session-expired'
+
+type RetryableConfig = InternalAxiosRequestConfig & { _retry?: boolean }
+
+let refreshInFlight: Promise<string | null> | null = null
+
+async function refreshAccessToken(): Promise<string | null> {
+  if (refreshInFlight) return refreshInFlight
+
+  refreshInFlight = (async () => {
+    try {
+      const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+      if (!refreshToken) return null
+
+      const { data } = await axios.post<ApiResponse<RefreshResponseData>>(
+        `${API_BASE_URL}/auth/refresh`,
+        { refresh_token: refreshToken },
+        { headers: { 'Content-Type': 'application/json' } },
+      )
+
+      if (!data.success || !data.data) return null
+
+      localStorage.setItem(ACCESS_TOKEN_KEY, data.data.token)
+      localStorage.setItem(REFRESH_TOKEN_KEY, data.data.refresh_token)
+      setAuthToken(data.data.token)
+      return data.data.token
+    } catch {
+      return null
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+
+  return refreshInFlight
+}
+
+apiClient.interceptors.response.use(
+  (res) => res,
+  async (error: unknown) => {
+    if (!axios.isAxiosError(error) || !error.config) {
+      return Promise.reject(error)
+    }
+    const status = error.response?.status
+    const cfg = error.config as RetryableConfig
+    const url = String(cfg.url ?? '')
+
+    if (
+      status !== 401 ||
+      cfg._retry ||
+      url.includes('/auth/login') ||
+      url.includes('/auth/refresh')
+    ) {
+      return Promise.reject(error)
+    }
+
+    const newToken = await refreshAccessToken()
+    if (!newToken) {
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+      return Promise.reject(error)
+    }
+
+    cfg._retry = true
+    cfg.headers = cfg.headers ?? {}
+    cfg.headers.Authorization = `Bearer ${newToken}`
+    return apiClient(cfg)
+  },
+)
 
 export function setAuthToken(token: string | null) {
   if (token) {
@@ -96,7 +168,7 @@ export function getApiErrorMessage(error: unknown, fallback = 'Request failed') 
       return 'Cannot reach the API. Check that the backend is running and the API URL is correct.'
     }
     if (status === 401) {
-      return 'Invalid email or password, or the account is inactive. If you use the demo users, run supabase/001_seed_demo_users.sql in Supabase after migrations.'
+      return 'Session expired or authentication failed. Sign in again.'
     }
     if (status === 403) {
       return 'Forbidden (403). Check Vercel / firewall rules and that the request hits the API, not a static file.'

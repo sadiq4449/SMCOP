@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import { listVisits } from '../services/visitsApi'
 import type { VisitSummary } from '../types/visit'
+import { normalizeQuarterInput } from '../utils/quarter'
 
 const monitorRoles = ['enumerator', 'deo', 'government', 'super_admin', 'principal']
 
@@ -19,12 +21,12 @@ export function MonitoringVisitsPage() {
     if (!user || !monitorRoles.includes(user.role)) return
     setLoading(true)
     setError(null)
-    void listVisits({ quarter: quarter.trim() || undefined, limit: 100 })
+    void listVisits({ quarter: normalizeQuarterInput(quarter).trim() || undefined, limit: 100 })
       .then((r) => {
         setItems(r.items)
         setTotal(r.total)
       })
-      .catch((e: Error) => setError(e.message))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load visits')))
       .finally(() => setLoading(false))
   }, [user, quarter])
 

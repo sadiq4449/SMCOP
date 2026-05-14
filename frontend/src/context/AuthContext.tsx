@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 
-import { apiClient, getApiErrorMessage, setAuthToken } from '../services/api'
+import { apiClient, getApiErrorMessage, SESSION_EXPIRED_EVENT, setAuthToken } from '../services/api'
 import type {
   ApiResponse,
   LoginResponseData,
@@ -70,6 +70,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     persistSession(response.data.data.token, response.data.data.refresh_token)
     await fetchProfile()
   }, [fetchProfile])
+
+  useEffect(() => {
+    const onSessionExpired = () => {
+      clearSession()
+      setUser(null)
+    }
+    window.addEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onSessionExpired)
+  }, [])
 
   useEffect(() => {
     const bootstrap = async () => {
