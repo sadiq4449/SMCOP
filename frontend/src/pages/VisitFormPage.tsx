@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useMatch, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import {
   createVisit,
   downloadDocument,
@@ -46,6 +47,8 @@ export function VisitFormPage() {
   const [loading, setLoading] = useState(!isNew)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [observationsError, setObservationsError] = useState<string | null>(null)
+  const [teachersError, setTeachersError] = useState<string | null>(null)
 
   const [observations, setObservations] = useState<ClassroomObservation[]>([])
   const [schoolTeachers, setSchoolTeachers] = useState<TeacherRow[]>([])
@@ -120,16 +123,22 @@ export function VisitFormPage() {
   useEffect(() => {
     if (!visit?.id) return
     let cancelled = false
-    void Promise.all([
-      listObservations({ visit_id: visit.id, limit: 50 }).then((r) => {
+    setObservationsError(null)
+    setTeachersError(null)
+    void listObservations({ visit_id: visit.id, limit: 50 })
+      .then((r) => {
         if (!cancelled) setObservations(r.items)
-      }),
-      getTeachers(visit.school_id).then((rows) => {
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setObservationsError(getApiErrorMessage(e, 'Failed to load classroom observations'))
+      })
+    void getTeachers(visit.school_id)
+      .then((rows) => {
         if (!cancelled) setSchoolTeachers(rows)
-      }),
-    ]).catch(() => {
-      if (!cancelled) setError('Could not load classroom observations or teachers')
-    })
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setTeachersError(getApiErrorMessage(e, 'Failed to load teachers'))
+      })
     return () => {
       cancelled = true
     }
@@ -351,10 +360,16 @@ export function VisitFormPage() {
         </Link>
       </header>
 
-      {error ? (
-        <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
-          {error}
-        </p>
+      {error || observationsError || teachersError ? (
+        <div className="space-y-2" role="alert">
+          {error ? <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p> : null}
+          {observationsError ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{observationsError}</p>
+          ) : null}
+          {teachersError ? (
+            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{teachersError}</p>
+          ) : null}
+        </div>
       ) : null}
 
       {isNew ? (

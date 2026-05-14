@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import type { PartnerOrg } from '../types/school'
 import {
   createPartnerOrg,
@@ -24,7 +25,7 @@ export function PartnerOrgsPage() {
   const refresh = () =>
     getPartnerOrgs()
       .then(setItems)
-      .catch(() => setError('Failed to load partner organizations'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load partner organizations')))
 
   useEffect(() => {
     if (user?.role !== 'super_admin') return

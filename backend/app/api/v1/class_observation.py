@@ -18,7 +18,7 @@ from app.schemas.class_observation import (
     ObservationDocumentSummary,
     PaginatedObservations,
 )
-from app.schemas.common import APIResponse
+from app.schemas.common import APIResponse, enum_scalar
 from app.schemas.monitoring import EvidenceUploadResult
 from app.services.audit import log_activity
 from app.services.evidence_storage import ALLOWED_IMAGE_EXT, save_observation_evidence_file
@@ -99,7 +99,7 @@ def _serialize(obs: ClassroomObservation, visit: Visit) -> ClassroomObservationO
     return ClassroomObservationOut(
         id=str(obs.id),
         visit_id=str(obs.visit_id),
-        visit_status=visit.status.value,
+        visit_status=enum_scalar(visit.status),
         school_id=str(visit.school_id),
         quarter=visit.quarter,
         teacher_id=str(obs.teacher_id) if obs.teacher_id else None,

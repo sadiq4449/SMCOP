@@ -88,20 +88,32 @@ export async function getPartnerOrgs(): Promise<PartnerOrg[]> {
 }
 
 export async function createPartnerOrg(body: Record<string, unknown>): Promise<PartnerOrg> {
-  const { data } = await apiClient.post<ApiResponse<PartnerOrg>>('/partner-orgs', body)
-  if (!data.success || !data.data) throw new Error(data.message)
-  return data.data
+  try {
+    const { data } = await apiClient.post<ApiResponse<PartnerOrg>>('/partner-orgs', body)
+    if (!data.success || !data.data) throw new Error(data.message || 'Create partner organization failed')
+    return data.data
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e, 'Failed to create partner organization'))
+  }
 }
 
 export async function updatePartnerOrg(id: string, body: Record<string, unknown>): Promise<PartnerOrg> {
-  const { data } = await apiClient.patch<ApiResponse<PartnerOrg>>(`/partner-orgs/${id}`, body)
-  if (!data.success || !data.data) throw new Error(data.message)
-  return data.data
+  try {
+    const { data } = await apiClient.patch<ApiResponse<PartnerOrg>>(`/partner-orgs/${id}`, body)
+    if (!data.success || !data.data) throw new Error(data.message || 'Update partner organization failed')
+    return data.data
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e, 'Failed to update partner organization'))
+  }
 }
 
 export async function deletePartnerOrg(id: string): Promise<void> {
-  const { data } = await apiClient.delete<ApiResponse<{ status: string }>>(`/partner-orgs/${id}`)
-  if (!data.success) throw new Error(data.message)
+  try {
+    const { data } = await apiClient.delete<ApiResponse<{ status: string }>>(`/partner-orgs/${id}`)
+    if (!data.success) throw new Error(data.message || 'Delete partner organization failed')
+  } catch (e) {
+    throw new Error(getApiErrorMessage(e, 'Failed to delete partner organization'))
+  }
 }
 
 export async function getEnrollment(schoolId: string): Promise<EnrollmentRow[]> {
