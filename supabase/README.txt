@@ -18,6 +18,8 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
       - Run 001_seed_demo_users.sql in the SQL Editor (idempotent). Password for each demo email: Password123!
    Optional: after you have districts + schools, run 002_backfill_demo_scopes.sql so demo DEO / principal /
       enumerator / teacher accounts get `district_id` or `assigned_schools` (otherwise many list APIs look "empty").
+   Optional: sample districts / talukas / union councils (Sindh-style list) — run 003_seed_geography_sindh_sample.sql
+      (idempotent). Adjust codes in that file if they conflict with existing `districts.code` (UNIQUE).
 
 3) App / Vercel env vars (same URL/password as above, one of):
    DATABASE_URL=...
