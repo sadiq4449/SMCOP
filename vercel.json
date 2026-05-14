@@ -1,47 +1,54 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": "pip install -r requirements.txt && cd frontend && npm install",
-  "buildCommand": "cd frontend && npm run build && mkdir -p ../public && find ../public -mindepth 1 -delete && cp -r dist/. ../public/",
-  "outputDirectory": "public",
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60,
-      "includeFiles": "backend/**"
-    }
-  },
-  "headers": [
+  "version": 2,
+  "builds": [
     {
-      "source": "/svc/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+      "src": "frontend/package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     },
     {
-      "source": "/health/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
-    },
-    {
-      "source": "/docs",
-      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
-    },
-    {
-      "source": "/openapi.json",
-      "headers": [{ "key": "Cache-Control", "value": "private, no-store, must-revalidate" }]
+      "src": "api/index.py",
+      "use": "@vercel/python"
     }
   ],
-  "rewrites": [
-    { "source": "/svc/(.*)", "destination": "/api/index" },
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/health/schema", "destination": "/api/index" },
-    { "source": "/health/db", "destination": "/api/index" },
-    { "source": "/health/env", "destination": "/api/index" },
-    { "source": "/health", "destination": "/api/index" },
-    { "source": "/docs", "destination": "/api/index" },
-    { "source": "/openapi.json", "destination": "/api/index" },
-    { "source": "/redoc", "destination": "/api/index" },
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "handle": "filesystem" },
+    {
+      "src": "/svc/(.*)",
+      "headers": { "cache-control": "private, no-store, must-revalidate" },
+      "continue": true
+    },
+    {
+      "src": "/health/(.*)",
+      "headers": { "cache-control": "private, no-store, must-revalidate" },
+      "continue": true
+    },
+    {
+      "src": "/api/(.*)",
+      "headers": { "cache-control": "private, no-store, must-revalidate" },
+      "continue": true
+    },
+    {
+      "src": "/docs",
+      "headers": { "cache-control": "private, no-store, must-revalidate" },
+      "continue": true
+    },
+    {
+      "src": "/openapi.json",
+      "headers": { "cache-control": "private, no-store, must-revalidate" },
+      "continue": true
+    },
+    { "src": "/svc/(.*)", "dest": "/api/index.py" },
+    { "src": "/api/(.*)", "dest": "/api/index.py" },
+    { "src": "/health/schema", "dest": "/api/index.py" },
+    { "src": "/health/db", "dest": "/api/index.py" },
+    { "src": "/health/env", "dest": "/api/index.py" },
+    { "src": "/health", "dest": "/api/index.py" },
+    { "src": "/docs", "dest": "/api/index.py" },
+    { "src": "/openapi.json", "dest": "/api/index.py" },
+    { "src": "/redoc", "dest": "/api/index.py" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

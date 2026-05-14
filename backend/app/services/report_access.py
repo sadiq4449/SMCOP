@@ -11,7 +11,7 @@ from app.models.report import Report, ReportStatus
 from app.models.school import School
 from app.models.geography import Taluka, UnionCouncil
 from app.models.user import User, UserRole
-from app.services.observation_access import school_in_district
+from app.services.visit_access import school_in_district
 from app.services.school_access import parse_assigned_school_ids, user_can_access_school
 
 

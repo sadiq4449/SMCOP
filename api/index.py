@@ -63,4 +63,9 @@ except Exception:
             return Response(status_code=200, headers=_cors)
         return _boot_json()
 
-__all__ = ["app"]
+
+# Legacy @vercel/python build scans for these names (`from ... import app` alone is insufficient).
+application = app
+handler = app
+
+__all__ = ["app", "application", "handler"]
