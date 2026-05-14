@@ -51,6 +51,7 @@ export function GeographyPage() {
       setTalukaId('')
       return
     }
+    setTalukaId('')
     void getTalukas(districtId)
       .then(setTalukas)
       .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load talukas')))

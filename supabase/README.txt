@@ -16,6 +16,8 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
 
    Optional demo login rows if `/health/schema` shows users_row_count: 0 (startup seed did not run on serverless):
       - Run 001_seed_demo_users.sql in the SQL Editor (idempotent). Password for each demo email: Password123!
+   Optional: after you have districts + schools, run 002_backfill_demo_scopes.sql so demo DEO / principal /
+      enumerator / teacher accounts get `district_id` or `assigned_schools` (otherwise many list APIs look "empty").
 
 3) App / Vercel env vars (same URL/password as above, one of):
    DATABASE_URL=...

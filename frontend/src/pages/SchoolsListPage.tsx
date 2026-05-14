@@ -37,8 +37,11 @@ export function SchoolsListPage() {
     if (!districtId) {
       setTalukas([])
       setTalukaId('')
+      setUcId('')
       return
     }
+    setTalukaId('')
+    setUcId('')
     void getTalukas(districtId)
       .then(setTalukas)
       .catch(() => setError('Failed to load talukas'))
@@ -50,6 +53,7 @@ export function SchoolsListPage() {
       setUcId('')
       return
     }
+    setUcId('')
     void getUnionCouncils(talukaId)
       .then(setUcs)
       .catch(() => setError('Failed to load union councils'))
