@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.database import get_db
 from app.models.issue import Issue, IssueCategory, IssueSeverity, IssueStatus
-from app.models.user import User, UserRole, UserStatus
+from app.models.user import User, UserRole
 from app.schemas.common import APIResponse
 from app.schemas.operational import IssueCreate, IssueOut, IssuePatch, PaginatedIssues
 from app.services.audit import log_activity
@@ -24,6 +24,7 @@ from app.services.issue_access import (
 )
 from app.services.notify import notify_issue_assigned, run_issue_resolved_side_effects
 from app.services.school_access import user_can_access_school
+from app.services.school_assignee_picks import assignee_valid_for_issue
 
 router = APIRouter(prefix="/issues", tags=["issues"])
 AuthUser = Annotated[User, Depends(get_current_user)]
@@ -50,15 +51,6 @@ def _issue_out(row: Issue) -> IssueOut:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
-
-
-def _assignee_ok(db: Session, school_id: UUID, assignee_id: UUID) -> bool:
-    u = db.get(User, assignee_id)
-    if u is None or u.status != UserStatus.ACTIVE:
-        return False
-    if u.role not in (UserRole.PRINCIPAL, UserRole.DEO, UserRole.SUPER_ADMIN):
-        return False
-    return user_can_access_school(db, u, school_id)
 
 
 @router.post("", response_model=APIResponse[IssueOut])
@@ -166,7 +158,7 @@ def patch_issue(
         if not admin:
             raise _forbidden()
         aid = UUID(data["assigned_to_user_id"])
-        if not _assignee_ok(db, issue.school_id, aid):
+        if not assignee_valid_for_issue(db, issue.school_id, aid):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail={

@@ -18,6 +18,7 @@ from app.schemas.operational import PaginatedTasks, TaskCreate, TaskOut, TaskPat
 from app.services.audit import log_activity
 from app.services.notify import notify_task_assigned
 from app.services.school_access import school_scope_filters, user_can_access_school
+from app.services.school_assignee_picks import assignee_valid_for_task
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 AuthUser = Annotated[User, Depends(get_current_user)]
@@ -63,13 +64,6 @@ def can_create_task(user: User) -> bool:
     return user.role in (UserRole.SUPER_ADMIN, UserRole.DEO)
 
 
-def can_assignee_for_school(db: Session, school_id: UUID, assignee_id: UUID) -> bool:
-    u = db.get(User, assignee_id)
-    if u is None or u.role not in (UserRole.PRINCIPAL, UserRole.TEACHER):
-        return False
-    return user_can_access_school(db, u, school_id)
-
-
 @router.post("", response_model=APIResponse[TaskOut])
 def create_task(
     payload: TaskCreate,
@@ -83,7 +77,7 @@ def create_task(
     if not user_can_access_school(db, current_user, school_uuid):
         raise _forbidden()
     assignee = UUID(payload.assignee_user_id)
-    if not can_assignee_for_school(db, school_uuid, assignee):
+    if not assignee_valid_for_task(db, school_uuid, assignee):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"success": False, "message": "Assignee must be principal/teacher for this school", "errors": {"assignee_user_id": "invalid"}},

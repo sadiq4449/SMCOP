@@ -5,6 +5,8 @@ the PRD matrix without spelunking every file.
 
 Implemented enforcement
 -----------------------
+**Assignees** — ``GET /assignees``: ``SUPER_ADMIN`` or ``DEO`` with school access; ``purpose=task`` (principal/teacher) or ``purpose=issue`` (principal/DEO/super admin) for UI pickers.
+
 **Users** — ``app.api.v1.users``:
   - List/create/get/patch/delete and generic ``PATCH /users/{id}``: ``SUPER_ADMIN`` only.
   - ``GET /users/assignment-candidates``: ``DEO`` only — field staff this district may assign (see ``app.services.user_school_assignment``).

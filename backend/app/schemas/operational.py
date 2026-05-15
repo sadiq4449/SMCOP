@@ -73,6 +73,17 @@ class PaginatedTasks(BaseModel):
     total: int
 
 
+class AssigneeOptionOut(BaseModel):
+    id: str
+    full_name: str
+    email: str
+    role: str
+
+
+class AssigneeOptionsData(BaseModel):
+    items: list[AssigneeOptionOut]
+
+
 class NotificationOut(BaseModel):
     id: str
     title: str

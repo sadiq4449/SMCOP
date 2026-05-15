@@ -1,19 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
+import { getSchool, getSchools } from '../services/schoolsApi'
 import {
   createIssue,
   createTask,
   listAnnouncements,
   listIssues,
+  listSchoolAssignees,
   listTasks,
   patchIssue,
   patchTask,
   type AnnouncementRow,
+  type AssigneeOption,
   type IssueRow,
   type TaskRow,
 } from '../services/operationalApi'
+import type { SchoolSummary } from '../types/school'
 import type { UserRole } from '../types/auth'
 
 function canCreateIssue(role: UserRole) {
@@ -26,6 +31,79 @@ function canAssignIssue(role: UserRole) {
 
 function canCreateTask(role: UserRole) {
   return role === 'super_admin' || role === 'deo'
+}
+
+function SchoolQuickPicker({
+  value,
+  onChange,
+  label,
+}: {
+  value: string
+  onChange: (schoolId: string) => void
+  label: string
+}) {
+  const [search, setSearch] = useState('')
+  const [hits, setHits] = useState<SchoolSummary[]>([])
+  const [selectedLabel, setSelectedLabel] = useState('')
+
+  useEffect(() => {
+    if (!value) {
+      setSelectedLabel('')
+      return
+    }
+    void getSchool(value)
+      .then((s) => setSelectedLabel(`${s.emis_code} · ${s.name}`))
+      .catch(() => setSelectedLabel(`School ${value.slice(0, 8)}…`))
+  }, [value])
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void getSchools({ q: search.trim() || undefined, limit: 40 })
+        .then((r) => setHits(r.items))
+        .catch(() => setHits([]))
+    }, 280)
+    return () => window.clearTimeout(t)
+  }, [search])
+
+  return (
+    <div className="space-y-2">
+      <span className="text-sm text-text-secondary">{label}</span>
+      {selectedLabel ? (
+        <p className="rounded-lg border border-muted-surface bg-section px-3 py-2 text-sm text-text-primary">
+          Selected: {selectedLabel}
+        </p>
+      ) : (
+        <p className="text-xs text-text-muted">Search and pick a school below (school UUID is filled automatically).</p>
+      )}
+      <input
+        type="search"
+        className="w-full rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+        value={search}
+        onChange={(ev) => setSearch(ev.target.value)}
+        placeholder="Search by EMIS code or school name"
+      />
+      <ul className="max-h-44 space-y-1 overflow-y-auto rounded-lg border border-muted-surface bg-surface p-1">
+        {hits.map((s) => (
+          <li key={s.id}>
+            <button
+              type="button"
+              onClick={() => {
+                onChange(s.id)
+                setSearch('')
+              }}
+              className={`w-full rounded-md px-2 py-2 text-left text-sm hover:bg-section ${
+                value === s.id ? 'bg-section font-medium text-text-primary' : 'text-text-secondary'
+              }`}
+            >
+              <span className="font-mono text-xs text-text-muted">{s.emis_code}</span> · {s.name}
+              <span className="mt-0.5 block text-[11px] text-text-muted">{s.district_name}</span>
+            </button>
+          </li>
+        ))}
+        {hits.length === 0 ? <li className="px-2 py-4 text-center text-xs text-text-muted">No matches.</li> : null}
+      </ul>
+    </div>
+  )
 }
 
 export function IssuesPage() {
@@ -44,14 +122,17 @@ export function IssuesPage() {
   const [severity, setSeverity] = useState('medium')
   const [details, setDetails] = useState('')
 
-  const [assigneeInput, setAssigneeInput] = useState<Record<string, string>>({})
+  const [issueAssigneePick, setIssueAssigneePick] = useState<Record<string, string>>({})
+  const [issueAssigneesBySchool, setIssueAssigneesBySchool] = useState<Record<string, AssigneeOption[]>>({})
+
   const [taskTitle, setTaskTitle] = useState('')
-  const [taskAssignee, setTaskAssignee] = useState('')
-  const [taskSchool, setTaskSchool] = useState(defaultSchoolId)
+  const [taskSchoolId, setTaskSchoolId] = useState(defaultSchoolId)
+  const [taskAssigneeId, setTaskAssigneeId] = useState('')
+  const [taskAssignees, setTaskAssignees] = useState<AssigneeOption[]>([])
 
   useEffect(() => {
     setSchoolId(defaultSchoolId)
-    setTaskSchool(defaultSchoolId)
+    setTaskSchoolId(defaultSchoolId)
   }, [defaultSchoolId])
 
   const load = useCallback(async () => {
@@ -82,6 +163,69 @@ export function IssuesPage() {
     void load()
   }, [load])
 
+  useEffect(() => {
+    if (!user || !canAssignIssue(user.role)) {
+      setIssueAssigneesBySchool({})
+      return
+    }
+    const schoolIds = [...new Set(issues.map((i) => i.school_id))]
+    if (schoolIds.length === 0) {
+      setIssueAssigneesBySchool({})
+      return
+    }
+    let cancelled = false
+    void Promise.all(
+      schoolIds.map((sid) =>
+        listSchoolAssignees(sid, 'issue')
+          .then((opts) => [sid, opts] as const)
+          .catch(() => [sid, []] as const),
+      ),
+    )
+      .then((pairs) => {
+        if (cancelled) return
+        const next: Record<string, AssigneeOption[]> = {}
+        for (const [sid, opts] of pairs) next[sid] = opts
+        setIssueAssigneesBySchool(next)
+      })
+      .catch(() => {
+        if (!cancelled) setIssueAssigneesBySchool({})
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [issues, user])
+
+  useEffect(() => {
+    if (!user || !canCreateTask(user.role)) {
+      setTaskAssignees([])
+      setTaskAssigneeId('')
+      return
+    }
+    const sid = taskSchoolId.trim()
+    if (!/^[0-9a-f-]{36}$/i.test(sid)) {
+      setTaskAssignees([])
+      setTaskAssigneeId('')
+      return
+    }
+    let cancelled = false
+    void listSchoolAssignees(sid, 'task')
+      .then((rows) => {
+        if (!cancelled) {
+          setTaskAssignees(rows)
+          setTaskAssigneeId((prev) => (prev && rows.some((r) => r.id === prev) ? prev : ''))
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setTaskAssignees([])
+          setTaskAssigneeId('')
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [taskSchoolId, user])
+
   const submitIssue = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user || !canCreateIssue(user.role)) return
@@ -89,7 +233,7 @@ export function IssuesPage() {
     setErr(null)
     try {
       const sid = schoolId.trim()
-      if (!sid) throw new Error('School ID required')
+      if (!sid) throw new Error('Choose a school from the search results')
       await createIssue({ school_id: sid, category, severity, details: details.trim() })
       setDetails('')
       setMsg('Issue reported.')
@@ -105,11 +249,13 @@ export function IssuesPage() {
     setMsg(null)
     setErr(null)
     try {
-      const sid = taskSchool.trim()
-      if (!sid || !taskTitle.trim() || !taskAssignee.trim()) throw new Error('Fill school, title, assignee user ID')
-      await createTask({ school_id: sid, title: taskTitle.trim(), assignee_user_id: taskAssignee.trim() })
+      const sid = taskSchoolId.trim()
+      if (!sid || !taskTitle.trim() || !taskAssigneeId.trim()) {
+        throw new Error('Choose a school, a title, and an assignee from the lists')
+      }
+      await createTask({ school_id: sid, title: taskTitle.trim(), assignee_user_id: taskAssigneeId.trim() })
       setTaskTitle('')
-      setTaskAssignee('')
+      setTaskAssigneeId('')
       setMsg('Task assigned.')
       await load()
     } catch (e) {
@@ -128,11 +274,12 @@ export function IssuesPage() {
   }
 
   const assignIssue = async (row: IssueRow) => {
-    const raw = assigneeInput[row.id]?.trim()
-    if (!raw) return
+    const pick = issueAssigneePick[row.id]?.trim()
+    if (!pick) return
     setErr(null)
     try {
-      await patchIssue(row.id, { assigned_to_user_id: raw })
+      await patchIssue(row.id, { assigned_to_user_id: pick })
+      setIssueAssigneePick((m) => ({ ...m, [row.id]: '' }))
       await load()
     } catch (e) {
       setErr(getApiErrorMessage(e, 'Failed'))
@@ -150,6 +297,11 @@ export function IssuesPage() {
   }
 
   const title = useMemo(() => 'Issues, tasks & announcements', [])
+
+  const assigneeOptionLabel = (o: AssigneeOption) => {
+    const rl = roleLabels[o.role as UserRole] ?? o.role
+    return `${o.full_name} — ${o.email} (${rl})`
+  }
 
   if (!user) return null
 
@@ -185,16 +337,9 @@ export function IssuesPage() {
         <section className="rounded-xl border border-muted-surface bg-surface p-4 shadow-sm">
           <h2 className="text-lg font-semibold text-text-primary">Report an issue</h2>
           <form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={submitIssue}>
-            <label className="block md:col-span-2">
-              <span className="text-sm text-text-secondary">School ID</span>
-              <input
-                className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
-                value={schoolId}
-                onChange={(ev) => setSchoolId(ev.target.value)}
-                placeholder="UUID"
-                required
-              />
-            </label>
+            <div className="md:col-span-2">
+              <SchoolQuickPicker value={schoolId} onChange={setSchoolId} label="School" />
+            </div>
             <label className="block">
               <span className="text-sm text-text-secondary">Category</span>
               <select
@@ -264,14 +409,24 @@ export function IssuesPage() {
                   <td className="py-2 pr-3 font-mono text-xs text-text-muted">{r.school_id.slice(0, 8)}…</td>
                   <td className="py-2 pr-3 space-y-2">
                     {canAssignIssue(user.role) ? (
-                      <div className="flex flex-wrap gap-1">
-                        <input
-                          className="min-w-[8rem] rounded border border-muted-surface px-2 py-1 text-xs"
-                          placeholder="Assignee user UUID"
-                          value={assigneeInput[r.id] ?? ''}
-                          onChange={(ev) => setAssigneeInput((m) => ({ ...m, [r.id]: ev.target.value }))}
-                        />
-                        <button type="button" className="rounded bg-secondary px-2 py-1 text-xs text-white" onClick={() => void assignIssue(r)}>
+                      <div className="flex min-w-[14rem] flex-col gap-1 sm:flex-row sm:items-center">
+                        <select
+                          className="min-w-0 flex-1 rounded border border-muted-surface px-2 py-1.5 text-xs text-text-primary"
+                          value={issueAssigneePick[r.id] ?? ''}
+                          onChange={(ev) => setIssueAssigneePick((m) => ({ ...m, [r.id]: ev.target.value }))}
+                        >
+                          <option value="">Select assignee…</option>
+                          {(issueAssigneesBySchool[r.school_id] ?? []).map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {assigneeOptionLabel(o)}
+                            </option>
+                          ))}
+                        </select>
+                        <button
+                          type="button"
+                          className="shrink-0 rounded bg-secondary px-2 py-1.5 text-xs text-white"
+                          onClick={() => void assignIssue(r)}
+                        >
                           Assign
                         </button>
                       </div>
@@ -306,25 +461,28 @@ export function IssuesPage() {
       {canCreateTask(user.role) ? (
         <section className="rounded-xl border border-muted-surface bg-surface p-4 shadow-sm">
           <h2 className="text-lg font-semibold text-text-primary">Assign improvement task</h2>
-          <form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={submitTask}>
-            <label className="block">
-              <span className="text-sm text-text-secondary">School ID</span>
-              <input
+          <form className="mt-3 grid gap-4 md:grid-cols-2" onSubmit={submitTask}>
+            <div className="md:col-span-2">
+              <SchoolQuickPicker value={taskSchoolId} onChange={setTaskSchoolId} label="School" />
+            </div>
+            <label className="block md:col-span-2">
+              <span className="text-sm text-text-secondary">Assignee</span>
+              <select
                 className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
-                value={taskSchool}
-                onChange={(ev) => setTaskSchool(ev.target.value)}
+                value={taskAssigneeId}
+                onChange={(ev) => setTaskAssigneeId(ev.target.value)}
                 required
-              />
-            </label>
-            <label className="block">
-              <span className="text-sm text-text-secondary">Assignee user ID</span>
-              <input
-                className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
-                value={taskAssignee}
-                onChange={(ev) => setTaskAssignee(ev.target.value)}
-                placeholder="Principal or teacher account UUID"
-                required
-              />
+              >
+                <option value="">Select principal or teacher…</option>
+                {taskAssignees.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {assigneeOptionLabel(o)}
+                  </option>
+                ))}
+              </select>
+              {taskSchoolId.trim() && taskAssignees.length === 0 ? (
+                <p className="mt-1 text-xs text-text-muted">No assignable users for this school in your scope.</p>
+              ) : null}
             </label>
             <label className="block md:col-span-2">
               <span className="text-sm text-text-secondary">Title</span>

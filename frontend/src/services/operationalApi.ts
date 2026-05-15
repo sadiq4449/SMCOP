@@ -123,6 +123,22 @@ export async function createTask(body: {
   return data.data
 }
 
+export interface AssigneeOption {
+  id: string
+  full_name: string
+  email: string
+  role: string
+}
+
+/** Super Admin / DEO: principals, teachers, or issue-specific roles for assignment pickers. */
+export async function listSchoolAssignees(schoolId: string, purpose: 'task' | 'issue') {
+  const { data } = await apiClient.get<ApiResponse<{ items: AssigneeOption[] }>>('/assignees', {
+    params: { school_id: schoolId, purpose },
+  })
+  if (!data.success || !data.data) throw new Error(data.message || 'Failed to load assignees')
+  return data.data.items
+}
+
 export async function listAnnouncements() {
   const { data } = await apiClient.get<ApiResponse<{ items: AnnouncementRow[]; total: number }>>('/announcements', {
     params: { limit: 30 },
