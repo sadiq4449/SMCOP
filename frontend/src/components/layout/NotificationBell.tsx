@@ -86,22 +86,26 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={onToggle}
-        className="relative rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm font-medium text-text-primary shadow-sm backdrop-blur-sm hover:bg-white/10"
+        className="relative rounded-xl border border-slate-200/90 bg-white/90 px-3.5 py-2 text-[13px] font-medium text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.95)] transition-colors duration-200 hover:border-slate-300 hover:bg-slate-50"
         aria-expanded={open}
         aria-label="Notifications"
       >
         Alerts
         {count > 0 ? (
-          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-danger px-1 text-xs font-semibold text-white">
+          <span className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-600 px-1 text-[11px] font-semibold text-white shadow-sm">
             {count > 99 ? '99+' : count}
           </span>
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-white/10 bg-surface/95 py-1 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-md">
-          <div className="flex items-center justify-between border-b border-muted-surface px-3 py-2">
-            <p className="text-sm font-semibold text-text-primary">Notifications</p>
-            <button type="button" className="text-xs text-secondary hover:underline" onClick={() => void onReadAll()}>
+        <div className="absolute right-0 z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white/95 py-1 shadow-[0_12px_48px_rgb(15_23_42/0.12)] backdrop-blur-xl">
+          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
+            <p className="text-[13px] font-semibold text-text-primary">Notifications</p>
+            <button
+              type="button"
+              className="text-[11px] font-medium text-text-muted transition-colors hover:text-text-primary"
+              onClick={() => void onReadAll()}
+            >
               Mark all read
             </button>
           </div>
@@ -116,12 +120,12 @@ export function NotificationBell() {
                 key={n.id}
                 type="button"
                 onClick={() => (n.is_read ? undefined : void onReadOne(n.id))}
-                className={`block w-full border-b border-white/5 px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.06] ${
-                  n.is_read ? 'text-text-muted' : 'bg-section/50 text-text-primary'
+                className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 ${
+                  n.is_read ? 'text-text-muted' : 'bg-slate-50/50 text-text-primary'
                 }`}
               >
                 <span className="font-medium">{n.title}</span>
-                <span className="mt-0.5 block text-xs text-text-secondary">{n.message}</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-text-secondary">{n.message}</span>
               </button>
             ))}
           </div>

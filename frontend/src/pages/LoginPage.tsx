@@ -30,40 +30,43 @@ export function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-ref-lg border border-white/10 bg-surface/90 p-8 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-md">
-        <div className="mb-8 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">SMOCP Portal</p>
-          <h1 className="mt-2 text-2xl font-semibold text-text-primary">Sign in to continue</h1>
-          <p className="mt-2 text-sm text-text-muted">
-            Government ERP access for school monitoring and reporting.
+      <div
+        className="w-full max-w-md border border-slate-200/90 bg-white/90 p-10 shadow-[0_1px_2px_rgb(15_23_42/0.04),0_24px_56px_rgb(15_23_42/0.08)] backdrop-blur-xl"
+        style={{ borderRadius: 'var(--radius-card-lg, 1.75rem)' }}
+      >
+        <div className="mb-10 text-center">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-muted">SMOCP Portal</p>
+          <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">Sign in</h1>
+          <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">
+            Secure access to national school monitoring and reporting.
           </p>
         </div>
 
-        <form className="space-y-5" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-text-secondary">Email</span>
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-text-muted">Email</span>
             <input
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 outline-none ring-primary/30 focus:ring-2"
+              className="w-full !py-3"
               required
             />
           </label>
 
           <label className="block">
-            <span className="mb-2 block text-sm font-medium text-text-secondary">Password</span>
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-text-muted">Password</span>
             <input
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-xl px-3 py-2.5 outline-none ring-primary/30 focus:ring-2"
+              className="w-full !py-3"
               required
             />
           </label>
 
           {error ? (
-            <p className="rounded-lg bg-danger/10 px-3 py-2 text-sm text-danger" role="alert">
+            <p className="rounded-xl border border-rose-200/80 bg-rose-50 px-4 py-3 text-sm text-rose-900" role="alert">
               {error}
             </p>
           ) : null}
@@ -71,20 +74,21 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-xl bg-gradient-to-br from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(91,140,255,0.26)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full rounded-xl bg-primary px-4 py-3 text-[15px] font-semibold text-white shadow-[0_2px_8px_rgb(51_78_104/0.2)] transition-opacity hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isSubmitting ? 'Signing in…' : 'Sign in'}
+            {isSubmitting ? 'Signing in…' : 'Continue'}
           </button>
         </form>
 
-        <p className="mt-4 text-center text-sm text-text-secondary">
-          <Link to="/forgot-password" className="text-accent hover:text-primary hover:underline">
+        <p className="mt-8 text-center text-sm text-text-secondary">
+          <Link to="/forgot-password" className="font-medium text-primary/90 hover:text-primary hover:underline">
             Forgot password?
           </Link>
         </p>
 
-        <div className="mt-6 rounded-xl border border-white/10 bg-surface-deep/40 p-4 text-sm text-text-muted">
-          Demo users are seeded for each role. Example: <span className="text-text-secondary">superadmin@example.com</span> / <span className="text-text-secondary">Password123!</span>
+        <div className="mt-8 rounded-xl border border-slate-200/80 bg-slate-50/80 p-4 text-center text-[13px] leading-relaxed text-text-muted">
+          Demo: <span className="font-mono text-text-secondary">superadmin@example.com</span> /{' '}
+          <span className="font-mono text-text-secondary">Password123!</span>
         </div>
       </div>
     </div>

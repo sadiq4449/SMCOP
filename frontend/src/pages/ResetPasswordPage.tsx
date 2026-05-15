@@ -34,16 +34,20 @@ export function ResetPasswordPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-10">
-      <div className="w-full max-w-md rounded-ref-lg border border-white/10 bg-surface/90 p-8 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-md">
-        <h1 className="text-xl font-semibold text-text-primary">Choose a new password</h1>
-        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+      <div
+        className="w-full max-w-md border border-slate-200/90 bg-white/90 p-10 shadow-[0_1px_2px_rgb(15_23_42/0.04),0_24px_56px_rgb(15_23_42/0.08)] backdrop-blur-xl"
+        style={{ borderRadius: 'var(--radius-card-lg, 1.75rem)' }}
+      >
+        <h1 className="text-2xl font-semibold tracking-tight text-text-primary">New password</h1>
+        <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">Choose a strong password for your account.</p>
+        <form className="mt-8 space-y-5" onSubmit={onSubmit}>
           <label className="block">
-            <span className="text-sm font-medium text-text-secondary">New password</span>
+            <span className="mb-2 block text-[11px] font-semibold uppercase tracking-wide text-text-muted">Password</span>
             <input
               type="password"
               required
               minLength={8}
-              className="mt-1 w-full rounded-xl px-3 py-2.5"
+              className="w-full !py-3"
               value={password}
               onChange={(ev) => setPassword(ev.target.value)}
             />
@@ -53,13 +57,13 @@ export function ResetPasswordPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-xl bg-gradient-to-br from-primary to-secondary py-2.5 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(91,140,255,0.26)] hover:opacity-95 disabled:opacity-60"
+            className="w-full rounded-xl bg-primary py-3 text-[15px] font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
           >
             {busy ? 'Saving…' : 'Update password'}
           </button>
         </form>
-        <p className="mt-4 text-center text-sm">
-          <Link to="/login" className="text-accent hover:text-primary hover:underline">
+        <p className="mt-8 text-center text-sm">
+          <Link to="/login" className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>
