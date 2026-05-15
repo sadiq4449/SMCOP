@@ -5,7 +5,10 @@ the PRD matrix without spelunking every file.
 
 Implemented enforcement
 -----------------------
-**Users** — ``app.api.v1.users``: all routes require ``UserRole.SUPER_ADMIN``.
+**Users** — ``app.api.v1.users``:
+  - List/create/get/patch/delete and generic ``PATCH /users/{id}``: ``SUPER_ADMIN`` only.
+  - ``GET /users/assignment-candidates``: ``DEO`` only — field staff this district may assign (see ``app.services.user_school_assignment``).
+  - ``PATCH /users/{id}/assigned-schools``: ``SUPER_ADMIN`` (full replace) or ``DEO`` (merge in-district schools, preserve out-of-district assignments); target role must be enumerator, principal, or teacher.
 Mutations call ``app.services.audit.log_activity`` with structured metadata.
 
 **Schools** — ``app.api.v1.schools``:

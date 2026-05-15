@@ -13,12 +13,20 @@ from app.models.partner_org import PartnerOrg
 from app.models.school import School, Teacher
 from app.models.user import User, UserRole, UserStatus
 from app.schemas.common import APIResponse
-from app.schemas.user_admin import PaginatedUsers, UserAdminOut, UserCreate, UserUpdate
+from app.schemas.user_admin import AssignedSchoolsPayload, PaginatedUsers, UserAdminOut, UserCreate, UserUpdate
 from app.services.audit import log_activity
+from app.services.user_school_assignment import (
+    FIELD_ROLES,
+    deo_can_manage_field_user,
+    district_school_ids,
+    merge_assigned_schools_for_deo,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 SuperAdmin = Annotated[User, Depends(role_required(UserRole.SUPER_ADMIN))]
+DeoOnly = Annotated[User, Depends(role_required(UserRole.DEO))]
+DeoOrSuperAdmin = Annotated[User, Depends(role_required(UserRole.SUPER_ADMIN, UserRole.DEO))]
 
 
 def _school_ids_from_strings(raw: list[str]) -> list[UUID]:
@@ -185,6 +193,135 @@ def list_users(
     )
 
 
+@router.get("/assignment-candidates", response_model=APIResponse[PaginatedUsers])
+def list_assignment_candidates(
+    deo: DeoOnly,
+    db: Session = Depends(get_db),
+    q: str | None = Query(None, min_length=1, max_length=150),
+) -> APIResponse[PaginatedUsers]:
+    """DEO-only: field staff (enumerator / principal / teacher) this district may assign schools to."""
+    if deo.district_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "success": False,
+                "message": "Your DEO account has no district_id — contact a Super Admin.",
+                "errors": {"district_id": "required"},
+            },
+        )
+    stmt = select(User).where(User.role.in_(FIELD_ROLES))
+    if q:
+        pattern = f"%{q}%"
+        stmt = stmt.where(or_(User.full_name.ilike(pattern), User.email.ilike(pattern)))
+    stmt = stmt.order_by(User.full_name).limit(500)
+    rows = db.scalars(stmt).all()
+    candidates = [u for u in rows if deo_can_manage_field_user(db, deo=deo, target=u)]
+    return APIResponse(
+        success=True,
+        message="Field staff you may assign schools to",
+        data=PaginatedUsers(items=[_user_out(u) for u in candidates], total=len(candidates)),
+    )
+
+
+@router.patch("/{user_id}/assigned-schools", response_model=APIResponse[UserAdminOut])
+def patch_user_assigned_schools(
+    user_id: UUID,
+    payload: AssignedSchoolsPayload,
+    actor: DeoOrSuperAdmin,
+    db: Session = Depends(get_db),
+) -> APIResponse[UserAdminOut]:
+    """Super Admin: replace ``assigned_schools``. DEO: merge in-district slice (out-of-district kept)."""
+    user = db.get(User, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "success": False,
+                "message": "User not found",
+                "errors": {"user_id": "not found"},
+            },
+        )
+    if user.role not in FIELD_ROLES:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "success": False,
+                "message": "assigned_schools apply only to enumerator, principal, and teacher accounts",
+                "errors": {"role": "forbidden"},
+            },
+        )
+
+    school_ids = _school_ids_from_strings(payload.assigned_schools)
+
+    if actor.role == UserRole.SUPER_ADMIN:
+        _validate_assigned_schools(db, school_ids)
+        new_list = [str(sid) for sid in school_ids]
+    else:
+        if actor.district_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": "Your DEO account has no district_id — contact a Super Admin.",
+                    "errors": {"district_id": "required"},
+                },
+            )
+        if not deo_can_manage_field_user(db, deo=actor, target=user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "success": False,
+                    "message": "You may not assign schools for this user",
+                    "errors": {"user_id": "forbidden"},
+                },
+            )
+        raw = user.assigned_schools if isinstance(user.assigned_schools, list) else []
+        try:
+            new_list = merge_assigned_schools_for_deo(
+                db,
+                deo_district_id=actor.district_id,
+                current_assigned=[str(x) for x in raw],
+                district_school_ids_payload=school_ids,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": str(exc),
+                    "errors": {"assigned_schools": "invalid_district_scope"},
+                },
+            ) from exc
+        merged_ids = _school_ids_from_strings(new_list)
+        _validate_assigned_schools(db, merged_ids)
+
+    sch_ids = _school_ids_from_strings(new_list)
+    if user.role == UserRole.TEACHER and user.linked_teacher_id is not None:
+        _validate_linked_teacher(db, UserRole.TEACHER, sch_ids, user.linked_teacher_id)
+
+    changes: dict = {}
+    if new_list != [str(x) for x in (user.assigned_schools or [])]:
+        changes["assigned_schools"] = {"from": user.assigned_schools, "to": new_list}
+    user.assigned_schools = new_list
+
+    db.commit()
+    db.refresh(user)
+
+    log_activity(
+        db,
+        action="users.assigned_schools",
+        target=str(user.id),
+        user_id=actor.id,
+        metadata={
+            "actor_email": actor.email,
+            "actor_role": actor.role.value,
+            "changes": changes,
+        },
+    )
+
+    return APIResponse(success=True, message="Assigned schools updated", data=_user_out(user))
+
+
 @router.get("/{user_id}", response_model=APIResponse[UserAdminOut])
 def get_user(user_id: UUID, _admin: SuperAdmin, db: Session = Depends(get_db)) -> APIResponse[UserAdminOut]:
     user = db.get(User, user_id)
@@ -217,7 +354,19 @@ def create_user(payload: UserCreate, admin: SuperAdmin, db: Session = Depends(ge
     district_uuid = UUID(payload.district_id) if payload.district_id else None
     _validate_partner_org(db, partner_uuid)
     if payload.role == UserRole.DEO:
+        if district_uuid is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": "DEO accounts require district_id",
+                    "errors": {"district_id": "required"},
+                },
+            )
         _validate_district(db, district_uuid)
+    elif payload.role in FIELD_ROLES:
+        if district_uuid is not None:
+            _validate_district(db, district_uuid)
     else:
         district_uuid = None
 
@@ -354,10 +503,16 @@ def update_user(
             user.assigned_schools = []
             changes["assigned_schools_cleared_for_role"] = True
 
-    if user.role != UserRole.DEO and user.district_id is not None:
+    roles_allow_optional_district = (
+        UserRole.DEO,
+        UserRole.ENUMERATOR,
+        UserRole.PRINCIPAL,
+        UserRole.TEACHER,
+    )
+    if user.role not in roles_allow_optional_district and user.district_id is not None:
         prev = str(user.district_id)
         user.district_id = None
-        changes["district_scope_cleared"] = {"reason": "role_not_deo", "previous_district_id": prev}
+        changes["district_scope_cleared"] = {"reason": "role_has_no_district_scope", "previous_district_id": prev}
 
     if user.role != UserRole.TEACHER:
         if user.linked_teacher_id is not None:

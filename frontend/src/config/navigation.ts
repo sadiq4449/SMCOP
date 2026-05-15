@@ -34,6 +34,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     sharedDashboard,
     opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
+    { label: 'Field assignments', path: '/dashboard/field-assignments' },
     { label: 'Districts', path: '/dashboard/districts' },
     { label: 'Approvals', path: '/dashboard/approvals' },
     { label: 'Comparisons', path: '/dashboard/comparisons' },

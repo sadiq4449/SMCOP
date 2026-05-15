@@ -171,6 +171,7 @@ export function UserFormPage() {
 
   const showDistrict = role === 'deo'
   const showSchoolPicker = SCHOOL_ROLES.includes(role)
+  const showDistrictPicker = showDistrict || showSchoolPicker
 
   const selectedSchoolLabels = useMemo(() => {
     const map = new Map(schoolChoices.map((s) => [s.id, s.name]))
@@ -195,14 +196,20 @@ export function UserFormPage() {
 
     if (!isEdit) {
       body.password = password
-      body.district_id = showDistrict && districtId ? districtId : null
+      if (role === 'deo') {
+        body.district_id = districtId.trim() || null
+      } else if (SCHOOL_ROLES.includes(role)) {
+        body.district_id = districtId.trim() || null
+      } else {
+        body.district_id = null
+      }
       body.assigned_schools = showSchoolPicker ? [...assignedSchoolIds] : []
       if (role === 'teacher') {
         body.linked_teacher_id = linkedTeacherId.trim() || null
       }
     } else {
-      if (showDistrict) {
-        body.district_id = districtId || null
+      if (showDistrictPicker) {
+        body.district_id = districtId.trim() || null
       }
       if (showSchoolPicker) {
         body.assigned_schools = [...assignedSchoolIds]
@@ -348,15 +355,23 @@ export function UserFormPage() {
             </select>
           </label>
 
-          {showDistrict ? (
+          {showDistrictPicker ? (
             <label className="block text-sm md:col-span-2">
-              <span className="mb-1 block font-medium text-text-secondary">District scope (DEO)</span>
+              <span className="mb-1 block font-medium text-text-secondary">
+                {showDistrict ? 'District scope (required for DEO)' : 'Primary district (optional)'}
+              </span>
+              <p className="mb-2 text-xs text-text-muted">
+                {showDistrict
+                  ? 'DEO dashboards and approvals are limited to this district.'
+                  : 'If set before any school is assigned, DEOs in that district can attach in-district schools without Super Admin.'}
+              </p>
               <select
                 value={districtId}
                 onChange={(e) => setDistrictId(e.target.value)}
+                required={showDistrict}
                 className="w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
               >
-                <option value="">Select district…</option>
+                <option value="">{showDistrict ? 'Select district…' : 'None / not tied to one district'}</option>
                 {districts.map((d) => (
                   <option key={d.id} value={d.id}>
                     {d.name}

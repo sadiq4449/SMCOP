@@ -36,6 +36,12 @@ class UserCreate(BaseModel):
     assigned_schools: list[str] = Field(default_factory=list)
 
 
+class AssignedSchoolsPayload(BaseModel):
+    """Replace (Super Admin) or district-slice merge (DEO) — see ``PATCH /users/{id}/assigned-schools``."""
+
+    assigned_schools: list[str] = Field(default_factory=list)
+
+
 class UserUpdate(BaseModel):
     full_name: str | None = Field(default=None, min_length=1, max_length=120)
     email: EmailStr | None = None

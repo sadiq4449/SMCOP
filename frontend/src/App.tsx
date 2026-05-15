@@ -10,6 +10,7 @@ import { ClassAttendancePage } from './pages/ClassAttendancePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { DistrictsBrowsePage } from './pages/DistrictsBrowsePage'
 import { ApiRoutingHintPage } from './pages/ApiRoutingHintPage'
+import { FieldStaffAssignmentsPage } from './pages/FieldStaffAssignmentsPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GeographyPage } from './pages/GeographyPage'
 import { GovernmentSchoolReportsPage } from './pages/GovernmentSchoolReportsPage'
@@ -50,6 +51,7 @@ function App() {
           <Route element={<ProtectedRoute />}>
             <Route element={<AppShell />}>
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/dashboard/field-assignments" element={<FieldStaffAssignmentsPage />} />
               <Route path="/dashboard/users/new" element={<UserFormPage />} />
               <Route path="/dashboard/users/:userId/edit" element={<UserFormPage />} />
               <Route path="/dashboard/users" element={<UsersListPage />} />

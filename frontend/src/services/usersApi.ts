@@ -34,6 +34,27 @@ export async function updateUser(id: string, body: Record<string, unknown>): Pro
   return data.data
 }
 
+/** DEO: enumerator / principal / teacher accounts this district may assign schools to. */
+export async function listAssignmentCandidates(params?: { q?: string }): Promise<PaginatedUsers> {
+  const { data } = await apiClient.get<ApiResponse<PaginatedUsers>>('/users/assignment-candidates', {
+    params: { q: params?.q },
+  })
+  if (!data.success || !data.data) throw new Error(data.message)
+  return data.data
+}
+
+/** Super Admin replaces list; DEO merges in-district schools only (see backend). */
+export async function patchUserAssignedSchools(
+  id: string,
+  assignedSchools: string[],
+): Promise<UserAdminRow> {
+  const { data } = await apiClient.patch<ApiResponse<UserAdminRow>>(`/users/${id}/assigned-schools`, {
+    assigned_schools: assignedSchools,
+  })
+  if (!data.success || !data.data) throw new Error(data.message)
+  return data.data
+}
+
 export async function deleteUser(id: string): Promise<void> {
   const { data } = await apiClient.delete<ApiResponse<{ status: string }>>(`/users/${id}`)
   if (!data.success) throw new Error(data.message)
