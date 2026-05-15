@@ -98,7 +98,7 @@ export function NotificationBell() {
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white/95 py-1 shadow-[0_12px_48px_rgb(15_23_42/0.12)] backdrop-blur-xl">
+        <div className="absolute right-0 top-full z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white/95 py-1 shadow-[0_12px_48px_rgb(15_23_42/0.12)] backdrop-blur-xl">
           <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
             <p className="text-[13px] font-semibold text-text-primary">Notifications</p>
             <button

@@ -36,7 +36,7 @@ function SearchCommand() {
 export function Header({ user, onLogout }: HeaderProps) {
   return (
     <header
-      className="flex flex-wrap items-center gap-4 rounded-ref-lg border border-slate-200/80 bg-white/65 px-5 py-3.5 shadow-[0_1px_2px_rgb(15_23_42/0.04),0_8px_32px_rgb(15_23_42/0.05)] backdrop-blur-xl"
+      className="relative z-30 flex flex-wrap items-center gap-4 rounded-ref-lg border border-slate-200/80 bg-white/65 px-5 py-3.5 shadow-[0_1px_2px_rgb(15_23_42/0.04),0_8px_32px_rgb(15_23_42/0.05)] backdrop-blur-xl"
       style={{ borderRadius: 'var(--radius-card-lg, 1.75rem)' }}
     >
       <SearchCommand />
