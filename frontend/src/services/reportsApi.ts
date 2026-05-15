@@ -7,7 +7,7 @@ import type {
   ReportComment,
   ReportSummary,
 } from '../types/report'
-import { apiClient } from './api'
+import { apiClient, unwrapBlobResponse } from './api'
 
 export async function listReports(params: {
   skip?: number
@@ -93,9 +93,10 @@ export async function compareReports(quarter: string, schoolIdsCsv: string): Pro
 }
 
 export async function downloadReportExport(reportId: string, format: 'xlsx' | 'pdf'): Promise<Blob> {
-  const { data } = await apiClient.get(`/reports/${reportId}/export`, {
+  const res = await apiClient.get<Blob>(`/reports/${reportId}/export`, {
     params: { format },
     responseType: 'blob',
+    validateStatus: () => true,
   })
-  return data as Blob
+  return unwrapBlobResponse(res, 'Export failed')
 }

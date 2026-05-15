@@ -29,6 +29,11 @@ def _default_api_v1_prefix() -> str:
     return "/api/v1"
 
 
+def _default_upload_dir() -> str:
+    """Vercel serverless FS is read-only except /tmp — evidence uploads must write there unless UPLOAD_DIR is set."""
+    return "/tmp/smocp-uploads" if os.environ.get("VERCEL") else "uploads"
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(".env",) if not os.environ.get("VERCEL") else None,
@@ -62,7 +67,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     seed_demo_users: bool = True
     jwt_algorithm: str = "HS256"
-    upload_dir: str = Field(default="uploads", validation_alias=AliasChoices("UPLOAD_DIR"))
+    upload_dir: str = Field(default_factory=_default_upload_dir, validation_alias=AliasChoices("UPLOAD_DIR"))
     max_upload_mb: int = Field(default=12, validation_alias=AliasChoices("MAX_UPLOAD_MB"))
 
     # Transactional email (optional)

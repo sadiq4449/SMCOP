@@ -165,7 +165,7 @@ export function VisitFormPage() {
       })
       navigate(`/dashboard/monitoring/${v.id}`)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Create failed')
+      setError(getApiErrorMessage(e, 'Create failed'))
     } finally {
       setCreating(false)
     }
@@ -190,7 +190,7 @@ export function VisitFormPage() {
       await refreshObservations()
       setObsTeacherName('')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Observation save failed')
+      setError(getApiErrorMessage(e, 'Observation save failed'))
     } finally {
       setSaving(false)
     }
@@ -206,7 +206,7 @@ export function VisitFormPage() {
       await uploadObservationEvidence(observationId, file)
       await refreshObservations()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Observation upload failed')
+      setError(getApiErrorMessage(err, 'Observation upload failed'))
     } finally {
       setSaving(false)
       input.value = ''
@@ -232,7 +232,7 @@ export function VisitFormPage() {
       const v = await patchVisit(visit.id, body)
       setVisit(v)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save failed')
+      setError(getApiErrorMessage(e, 'Save failed'))
     } finally {
       setSaving(false)
     }
@@ -254,7 +254,7 @@ export function VisitFormPage() {
       for (const s of v.kpi_scores) next[s.kpi_id] = s.score
       setScores(next)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Save KPIs failed')
+      setError(getApiErrorMessage(e, 'Save KPIs failed'))
     } finally {
       setSaving(false)
     }
@@ -283,7 +283,7 @@ export function VisitFormPage() {
       })
       setVisit(v)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Finalize failed — ensure date set & KPI saved.')
+      setError(getApiErrorMessage(e, 'Finalize failed — ensure date set & KPI saved.'))
     } finally {
       setSaving(false)
     }
@@ -303,7 +303,7 @@ export function VisitFormPage() {
       const v = await getVisit(visit.id)
       setVisit(v)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed')
+      setError(getApiErrorMessage(err, 'Upload failed'))
     } finally {
       setSaving(false)
       input.value = ''
@@ -319,8 +319,8 @@ export function VisitFormPage() {
       a.download = filename
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      setError('Download failed')
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Download failed'))
     }
   }
 

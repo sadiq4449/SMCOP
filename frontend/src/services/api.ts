@@ -1,4 +1,9 @@
-import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios'
+import axios, {
+  AxiosHeaders,
+  type AxiosError,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 
 import type { ApiResponse, RefreshResponseData } from '../types/auth'
 
@@ -39,6 +44,18 @@ export const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+/**
+ * FormData uploads must NOT send `Content-Type: application/json` (default above) or the
+ * server cannot parse multipart — evidence uploads fail with 422 / empty body.
+ */
+apiClient.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    config.headers = AxiosHeaders.from(config.headers ?? {})
+    config.headers.delete('Content-Type')
+  }
+  return config
 })
 
 /** Kept in sync with AuthContext localStorage keys. */
@@ -153,6 +170,31 @@ function messageFromUnknownData(data: unknown): string | undefined {
     if (code) return code
   }
   return undefined
+}
+
+/**
+ * When `responseType: 'blob'`, the server may still return a JSON error body.
+ * Without this check, callers save a non-binary file (e.g. corrupt "PDF").
+ */
+export async function unwrapBlobResponse(res: AxiosResponse<Blob>, fallbackLabel: string): Promise<Blob> {
+  const blob = res.data
+  if (res.status >= 400 || (typeof blob.type === 'string' && blob.type.includes('json'))) {
+    const text = await blob.text()
+    let msg = `${fallbackLabel} (HTTP ${res.status})`
+    try {
+      const j = JSON.parse(text) as { message?: string; detail?: unknown }
+      if (typeof j.message === 'string' && j.message.trim()) {
+        msg = j.message.trim()
+      } else if (j.detail && typeof j.detail === 'object' && j.detail !== null && 'message' in j.detail) {
+        const m = (j.detail as { message?: unknown }).message
+        if (typeof m === 'string' && m.trim()) msg = m.trim()
+      }
+    } catch {
+      /* keep msg */
+    }
+    throw new Error(msg)
+  }
+  return blob
 }
 
 export function getApiErrorMessage(error: unknown, fallback = 'Request failed') {

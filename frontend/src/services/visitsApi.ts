@@ -1,6 +1,6 @@
 import type { ApiResponse } from '../types/auth'
 import type { KPIRow, PaginatedVisits, VisitDetail, VisitSummary } from '../types/visit'
-import { apiClient } from './api'
+import { apiClient, unwrapBlobResponse } from './api'
 
 export async function getKpis(): Promise<KPIRow[]> {
   const { data } = await apiClient.get<ApiResponse<KPIRow[]>>('/kpis')
@@ -65,8 +65,9 @@ export async function uploadVisitEvidence(
 }
 
 export async function downloadDocument(documentId: string): Promise<Blob> {
-  const { data } = await apiClient.get(`/documents/${documentId}/download`, {
+  const res = await apiClient.get<Blob>(`/documents/${documentId}/download`, {
     responseType: 'blob',
+    validateStatus: () => true,
   })
-  return data as Blob
+  return unwrapBlobResponse(res, 'Download failed')
 }
