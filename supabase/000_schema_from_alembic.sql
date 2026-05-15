@@ -1,4 +1,4 @@
-﻿BEGIN;
+BEGIN;
 
 CREATE TABLE alembic_version (
     version_num VARCHAR(32) NOT NULL, 
@@ -519,6 +519,42 @@ CREATE INDEX ix_password_reset_tokens_token_hash ON password_reset_tokens (token
 CREATE INDEX ix_password_reset_tokens_user_id ON password_reset_tokens (user_id);
 
 UPDATE alembic_version SET version_num='0008_issues_notify' WHERE alembic_version.version_num = '0007_reports';
+
+-- Running upgrade 0008_issues_notify -> 0009_user_roles_ie_partner
+
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ie';
+
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'partner';
+
+UPDATE users SET role = 'ie'::user_role WHERE role::text = 'enumerator';
+
+UPDATE users SET role = 'partner'::user_role WHERE role::text IN ('principal', 'teacher') AND partner_org_id IS NOT NULL;
+
+UPDATE users SET role = 'government'::user_role WHERE role::text IN ('deo', 'principal', 'teacher');
+
+UPDATE alembic_version SET version_num='0009_user_roles_ie_partner' WHERE alembic_version.version_num = '0008_issues_notify';
+
+-- Running upgrade 0009_user_roles_ie_partner -> 0010_kpi_weight
+
+ALTER TABLE kpis ADD COLUMN weight NUMERIC(5, 2) DEFAULT 1.0 NOT NULL;
+
+UPDATE alembic_version SET version_num='0010_kpi_weight' WHERE alembic_version.version_num = '0009_user_roles_ie_partner';
+
+-- Running upgrade 0010_kpi_weight -> 0011_visit_schedule
+
+ALTER TABLE visits ADD COLUMN scheduled_date DATE;
+
+ALTER TABLE visits ADD COLUMN scheduled_time_start TIME WITHOUT TIME ZONE;
+
+ALTER TABLE visits ADD COLUMN scheduled_time_end TIME WITHOUT TIME ZONE;
+
+UPDATE alembic_version SET version_num='0011_visit_schedule' WHERE alembic_version.version_num = '0010_kpi_weight';
+
+-- Running upgrade 0011_visit_schedule -> 0012_visits_scheduled_date_index
+
+CREATE INDEX IF NOT EXISTS ix_visits_scheduled_date ON visits (scheduled_date);
+
+UPDATE alembic_version SET version_num='0012_visits_scheduled_date_index' WHERE alembic_version.version_num = '0011_visit_schedule';
 
 COMMIT;
 

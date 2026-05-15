@@ -20,8 +20,8 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
       (idempotent). Adjust codes in that file if they conflict with existing `districts.code` (UNIQUE).
    Optional demo schools + linked demo teacher login — run 004_seed_demo_schools.sql after 003 (needs matching UC names).
       Creates `SMOCP-DEMO-*` schools, a `Demo Teacher (seeded)` row, and sets `teacher@example.com` linked_teacher_id.
-   Optional: after districts + schools exist, run 002_backfill_demo_scopes.sql so demo DEO / principal /
-      enumerator / teacher accounts get `district_id` or `assigned_schools`. Run after 003 and 004 for a full demo chain.
+   Optional: after districts + schools exist, run 002_backfill_demo_scopes.sql so legacy-style demo accounts get
+      `district_id` or `assigned_schools`. Run after 003 and 004 for a full demo chain.
       When `SMOCP-DEMO-*` schools exist, 002 merges their IDs into existing `assigned_schools` (deduped), not only empty arrays.
 
 3) App / Vercel env vars (same URL/password as above, one of):
@@ -57,7 +57,9 @@ Supabase setup (you create the project in the dashboard; we cannot do that from 
 
 4) CORS: add your frontend origin (e.g. https://smcop-portal.vercel.app) to CORS_ORIGINS.
 
-Regenerate 000_schema_from_alembic.sql after new Alembic revisions:
-  cd backend
-  set DATABASE_URL=postgresql+psycopg2://postgres:postgres@localhost:5432/postgres
-  alembic upgrade head --sql > ../supabase/000_schema_from_alembic.sql
+Regenerate 000_schema_from_alembic.sql after new Alembic revisions (captures SQL stdout only; avoid PowerShell
+  `2>&1` which merges Alembic INFO logs and corrupts the dump):
+
+  python scripts/regenerate_supabase_schema_sql.py
+
+  Or Command Prompt: cd backend && alembic upgrade head --sql > ..\supabase\000_schema_from_alembic.sql

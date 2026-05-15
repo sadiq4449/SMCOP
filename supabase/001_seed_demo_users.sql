@@ -1,5 +1,5 @@
 -- Demo users (aligned with backend/app/db/seed.py). Password for all: Password123!
--- Run after 000_schema_from_alembic.sql and 005_user_role_ie_partner.sql (when migrating legacy DBs).
+-- Run after 000_schema_from_alembic.sql (includes IE/partner enum migration via Alembic chain).
 
 BEGIN;
 
