@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 
+import {
+  DashboardGaugeBoard,
+  kpiAggregateToPercent,
+  type ScoreGaugeCardDef,
+} from '../components/dashboard/ScoreGaugeStrip'
 import { PremiumEyebrow, PremiumMetricCard, PremiumPanel } from '../components/premium/PremiumMetricCard'
 import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
@@ -20,18 +25,22 @@ function quarterNow() {
   return `Q${q}-${d.getFullYear()}`
 }
 
-function barPct(score: number | null | undefined): number | null {
-  if (score == null || Number.isNaN(Number(score))) return null
-  const n = Number(score)
-  if (n < 0) return 0
-  return Math.min(100, Math.round(n))
-}
-
 function ratioPct(num: unknown, den: unknown): number | null {
   const a = Number(num)
   const b = Number(den)
   if (!Number.isFinite(a) || !Number.isFinite(b) || b <= 0) return null
   return Math.min(100, Math.round((a / b) * 100))
+}
+
+function clampPct(n: number): number {
+  return Math.min(100, Math.max(0, Math.round(n)))
+}
+
+function meanAggregateScore(rows: Record<string, unknown>[] | null): number | null {
+  if (!rows?.length) return null
+  const nums = rows.map((r) => Number(r.aggregate_score)).filter((x) => Number.isFinite(x))
+  if (!nums.length) return null
+  return nums.reduce((a, b) => a + b, 0) / nums.length
 }
 
 export function DashboardPage() {
@@ -43,6 +52,8 @@ export function DashboardPage() {
   const [districtDetail, setDistrictDetail] = useState<Record<string, unknown> | null>(null)
   const [districts, setDistricts] = useState<District[]>([])
   const [govDistrictId, setGovDistrictId] = useState('')
+  /** Bumps after each successful load so score rings replay their entrance animation. */
+  const [gaugeAnim, setGaugeAnim] = useState(0)
 
   const assigned = useMemo(() => user?.assigned_schools ?? [], [user?.assigned_schools])
   const primarySchoolId = assigned[0] ?? ''
@@ -99,12 +110,211 @@ export function DashboardPage() {
       setDistrictDetail(null)
     } finally {
       setLoading(false)
+      setGaugeAnim((n) => n + 1)
     }
   }, [user, quarter, govDistrictId, primarySchoolId])
 
   useEffect(() => {
     void reload()
   }, [reload])
+
+  const nationalGaugeCards = useMemo((): ScoreGaugeCardDef[] => {
+    const t =
+      main && typeof main.totals === 'object' && main.totals !== null ? (main.totals as Record<string, unknown>) : null
+    if (!t) return []
+    const iss =
+      main && typeof main.issues === 'object' && main.issues !== null ? (main.issues as Record<string, unknown>) : null
+
+    const overall = kpiAggregateToPercent(t.overall_avg_aggregate_score as number | null)
+    const fin = ratioPct(t.visits_finalized, t.visits)
+    const draft = ratioPct(t.visits_draft, t.visits)
+    const visits = Number(t.visits) || 0
+    const schools = Number(t.schools) || 0
+    const pulse = schools > 0 ? clampPct((visits / schools) * 22) : null
+
+    const cards: ScoreGaugeCardDef[] = [
+      {
+        key: 'overall',
+        label: 'Overall score',
+        hint: 'Avg KPI index (0–5 scaled to 100)',
+        ringProgress: overall,
+        displayValue: overall ?? '—',
+      },
+      {
+        key: 'certainty',
+        label: 'Visit certainty',
+        hint: 'Share of finalized visits',
+        ringProgress: fin,
+        displayValue: fin ?? '—',
+      },
+      {
+        key: 'drafts',
+        label: 'Draft load',
+        hint: 'Draft share of quarter visits',
+        ringProgress: draft,
+        displayValue: draft ?? '—',
+      },
+      {
+        key: 'pulse',
+        label: 'Field pulse',
+        hint: 'Visits per school (scaled)',
+        ringProgress: pulse,
+        displayValue: pulse ?? '—',
+      },
+      {
+        key: 'schools',
+        label: 'Schools',
+        hint: 'In national registry',
+        ringProgress: null,
+        displayValue: String(t.schools ?? '—'),
+      },
+    ]
+
+    if (iss && iss.open_count != null) {
+      const oc = Number(iss.open_count)
+      if (Number.isFinite(oc) && oc >= 0) {
+        cards.push({
+          key: 'issues',
+          label: 'Open issues',
+          hint: 'Workload in the queue',
+          ringProgress: oc <= 0 ? 0 : clampPct(oc * 9),
+          displayValue: oc,
+        })
+      }
+    }
+
+    return cards
+  }, [main])
+
+  const districtGaugeCards = useMemo((): ScoreGaugeCardDef[] => {
+    if (!districtDetail) return []
+    const schools = Array.isArray(districtDetail.schools)
+      ? (districtDetail.schools as Record<string, unknown>[])
+      : []
+    const low = Array.isArray(districtDetail.low_performers)
+      ? (districtDetail.low_performers as Record<string, unknown>[])
+      : []
+    const gapIds = Array.isArray(districtDetail.facility_gap_school_ids)
+      ? (districtDetail.facility_gap_school_ids as string[])
+      : []
+
+    const mean = meanAggregateScore(schools)
+    const kpiIdx = kpiAggregateToPercent(mean)
+    const pDraft = Number(districtDetail.pending_draft_visits) || 0
+    const pRep = Number(districtDetail.pending_report_reviews) || 0
+    const gaps = gapIds.length
+    const lows = low.length
+
+    return [
+      {
+        key: 'kpi',
+        label: 'District KPI',
+        hint: 'Avg visit score on this page',
+        ringProgress: kpiIdx,
+        displayValue: kpiIdx ?? '—',
+      },
+      {
+        key: 'draft',
+        label: 'Draft pressure',
+        hint: 'Pending enumerator visits',
+        ringProgress: clampPct(pDraft * 8),
+        displayValue: pDraft,
+      },
+      {
+        key: 'reports',
+        label: 'Report queue',
+        hint: 'Awaiting review',
+        ringProgress: clampPct(pRep * 12),
+        displayValue: pRep,
+      },
+      {
+        key: 'facilities',
+        label: 'Facility signals',
+        hint: 'Schools with infra gaps',
+        ringProgress: clampPct(gaps * 14),
+        displayValue: gaps,
+      },
+      {
+        key: 'risk',
+        label: 'Risk basket',
+        hint: 'Tracked low performers',
+        ringProgress: clampPct(lows * 18),
+        displayValue: lows,
+      },
+    ]
+  }, [districtDetail])
+
+  const schoolGaugeCards = useMemo((): ScoreGaugeCardDef[] => {
+    if (!main || typeof main.school_id !== 'string') return []
+    const kt = Array.isArray(main.kpi_trend) ? (main.kpi_trend as Record<string, unknown>[]) : null
+    const att =
+      typeof main.attendance === 'object' && main.attendance !== null
+        ? (main.attendance as Record<string, unknown>)
+        : null
+    const enrol = Array.isArray(main.enrollment_trend) ? (main.enrollment_trend as Record<string, unknown>[]) : null
+
+    const qn = quarter.trim()
+    let row: Record<string, unknown> | null = null
+    if (kt?.length) {
+      row = kt.find((r) => String(r.quarter) === qn) ?? null
+      if (!row) {
+        for (let i = kt.length - 1; i >= 0; i--) {
+          if (kt[i].aggregate_score != null) {
+            row = kt[i]
+            break
+          }
+        }
+        if (!row) row = kt[kt.length - 1]
+      }
+    }
+
+    const kpiPct = kpiAggregateToPercent(row?.aggregate_score as number | null)
+    const teach = ratioPct(att?.teacher_approved_rows, att?.teacher_attendance_rows)
+    const s30 = Number(att?.last_30d_student_days) || 0
+    const t30 = Number(att?.last_30d_teacher_rows) || 0
+    const mix = s30 + t30 > 0 ? clampPct((s30 / (s30 + t30)) * 100) : null
+
+    let enrollPct: number | null = null
+    let enrollTot = 0
+    if (enrol?.length) {
+      const mx = Math.max(...enrol.map((r) => Number(r.total) || 0), 1)
+      const last = enrol[enrol.length - 1]
+      enrollTot = Number(last.total) || 0
+      enrollPct = clampPct((enrollTot / mx) * 100)
+    }
+
+    return [
+      {
+        key: 'kpi',
+        label: 'Visit KPI',
+        hint: row ? `Quarter ${String(row.quarter)}` : 'Latest visit signal',
+        ringProgress: kpiPct,
+        displayValue: kpiPct ?? '—',
+      },
+      {
+        key: 'teachers',
+        label: 'Teacher approvals',
+        hint: 'Approved rows this quarter',
+        ringProgress: teach,
+        displayValue: teach ?? '—',
+      },
+      {
+        key: 'rolling',
+        label: 'Rolling mix',
+        hint: 'Student vs teacher capture (30d)',
+        ringProgress: mix,
+        displayValue: mix ?? '—',
+      },
+      {
+        key: 'enrollment',
+        label: 'Enrollment pulse',
+        hint: 'Latest headcount vs peak',
+        ringProgress: enrollPct,
+        displayValue: enrollTot > 0 ? enrollTot : '—',
+        centerSuffix: null,
+      },
+    ]
+  }, [main, quarter])
 
   if (!user) return null
 
@@ -235,6 +445,14 @@ export function DashboardPage() {
               <h2 className="mt-2 text-xl font-semibold tracking-tight text-text-primary">National totals</h2>
             </div>
           </div>
+          {nationalGaugeCards.length > 0 ? (
+            <DashboardGaugeBoard
+              location={`National programme · ${quarter.trim() || quarterNow()}`}
+              contextLine={roleLabels[user.role]}
+              cards={nationalGaugeCards}
+              animateKey={gaugeAnim > 0 ? String(gaugeAnim) : ''}
+            />
+          ) : null}
           <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
             {[
               { label: 'Schools', value: String(totals.schools ?? '—'), hint: 'In national scope', icon: 'S', tone: 'neutral' as const, progress: null },
@@ -268,7 +486,7 @@ export function DashboardPage() {
                 hint: 'Finalized visits with scores',
                 icon: 'K',
                 tone: 'neutral' as const,
-                progress: barPct(totals.overall_avg_aggregate_score as number | null),
+                progress: kpiAggregateToPercent(totals.overall_avg_aggregate_score as number | null),
               },
             ].map((m, idx) => (
               <div
@@ -332,7 +550,7 @@ export function DashboardPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {districtRows.map((r) => {
-                  const sc = barPct(r.avg_aggregate_score as number | null)
+                  const sc = kpiAggregateToPercent(r.avg_aggregate_score as number | null)
                   return (
                     <tr key={String(r.district_id)} className="bg-white/40 transition-colors hover:bg-slate-50/80">
                       <td className="px-8 py-4">
@@ -374,6 +592,13 @@ export function DashboardPage() {
             </h2>
             <p className="mt-1 font-mono text-xs text-text-muted">{String(districtDetail.district_id ?? '')}</p>
           </PremiumPanel>
+
+          <DashboardGaugeBoard
+            location={String(districtDetail.district_name ?? 'District')}
+            contextLine={`${roleLabels[user.role]} · ${String(districtDetail.quarter ?? (quarter.trim() || quarterNow()))}`}
+            cards={districtGaugeCards}
+            animateKey={gaugeAnim > 0 ? String(gaugeAnim) : ''}
+          />
 
           <div>
             <PremiumEyebrow>Compliance indicators</PremiumEyebrow>
@@ -497,6 +722,15 @@ export function DashboardPage() {
             )}
           </PremiumPanel>
 
+          {schoolGaugeCards.length > 0 ? (
+            <DashboardGaugeBoard
+              location={String(main?.school_name ?? 'School')}
+              contextLine={`${quarter.trim() || quarterNow()} · ${roleLabels[user.role]}`}
+              cards={schoolGaugeCards}
+              animateKey={gaugeAnim > 0 ? String(gaugeAnim) : ''}
+            />
+          ) : null}
+
           {enrollment && enrollment.length > 0 ? (
             <PremiumPanel className="animate-premium-in">
               <PremiumEyebrow>Quarterly analytics</PremiumEyebrow>
@@ -575,7 +809,7 @@ export function DashboardPage() {
               <h3 className="mt-2 text-lg font-semibold text-text-primary">Visit score trajectory</h3>
               <div className="mt-8 space-y-5">
                 {kpiTrend.map((row) => {
-                  const p = barPct(row.aggregate_score as number | null)
+                  const p = kpiAggregateToPercent(row.aggregate_score as number | null)
                   return (
                     <div key={String(row.quarter)} className="flex flex-wrap items-center gap-4 text-[13px]">
                       <span className="w-24 shrink-0 font-mono text-xs font-medium text-text-muted">{String(row.quarter)}</span>
