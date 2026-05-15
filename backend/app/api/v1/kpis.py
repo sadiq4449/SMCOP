@@ -26,6 +26,7 @@ def list_kpis(
             max_score=k.max_score,
             category=k.category,
             sort_order=k.sort_order,
+            weight=float(k.weight) if k.weight is not None else 1.0,
         )
         for k in rows
     ]

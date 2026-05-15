@@ -22,6 +22,7 @@ class KPIOut(BaseModel):
     max_score: int
     category: str
     sort_order: int
+    weight: float
 
 
 class KpiScoreOut(BaseModel):

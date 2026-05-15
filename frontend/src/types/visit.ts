@@ -5,6 +5,7 @@ export interface KPIRow {
   max_score: number
   category: string
   sort_order: number
+  weight: number
 }
 
 export interface KpiScoreRow {

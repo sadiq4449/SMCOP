@@ -31,6 +31,7 @@ class KPI(Base):
     max_score: Mapped[int] = mapped_column(Integer, nullable=False)
     category: Mapped[str] = mapped_column(String(120), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    weight: Mapped[float] = mapped_column(Numeric(5, 2), nullable=False, default=1.0, server_default="1.0")
 
 
 class Visit(Base):

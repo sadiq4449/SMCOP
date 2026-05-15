@@ -21,15 +21,18 @@ def recompute_visit_aggregate(db: Session, visit_id: UUID) -> None:
         return
 
     kpi_rows = db.scalars(select(KPI)).all()
-    max_map = {k.id: k.max_score for k in kpi_rows}
+    kpi_map = {k.id: (k.max_score, float(k.weight) if k.weight is not None else 1.0) for k in kpi_rows}
 
-    total_score = 0
-    total_max = 0
+    weighted_score = 0.0
+    weighted_max = 0.0
     for s in scores:
-        mx = max_map.get(s.kpi_id)
-        if mx is None:
+        meta = kpi_map.get(s.kpi_id)
+        if not meta:
             continue
-        total_score += s.score
-        total_max += mx
+        mx, w = meta
+        if mx <= 0 or w <= 0:
+            continue
+        weighted_score += (s.score / mx) * w
+        weighted_max += w
 
-    visit.aggregate_score = round((total_score / total_max) * 100, 2) if total_max else None
+    visit.aggregate_score = round((weighted_score / weighted_max) * 100, 2) if weighted_max else None

@@ -525,7 +525,9 @@ export function VisitFormPage() {
                 <div key={k.id} className="flex flex-wrap items-center gap-4">
                   <div className="min-w-[220px] flex-1">
                     <p className="text-sm font-medium text-text-primary">{k.name}</p>
-                    <p className="text-xs text-text-muted">Max {k.max_score}</p>
+                    <p className="text-xs text-text-muted">
+                      Max {k.max_score} · Weight {k.weight.toFixed(2)}
+                    </p>
                   </div>
                   <input
                     type="range"
@@ -554,7 +556,10 @@ export function VisitFormPage() {
 
           <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
             <h2 className="text-lg font-semibold text-text-primary">Classroom observations</h2>
-            <p className="text-sm text-text-muted">Tied to this visit; photos attach per observation. DEOs may add reviewer comments from API.</p>
+            <p className="text-sm text-text-muted">
+              Tied to this visit; photos attach per observation. PPP Node reviewers may add comments after the visit is
+              finalized.
+            </p>
             {canEdit ? (
               <div className="grid gap-3 md:grid-cols-2">
                 <label className="block text-sm md:col-span-2">
