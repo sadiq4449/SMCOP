@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import {
   downloadAttendanceExport,
   downloadAttendanceExportXlsx,
@@ -57,8 +58,11 @@ export function AttendancePage() {
       .then((s) => {
         if (!cancelled) setSchoolLabel(s.name)
       })
-      .catch(() => {
-        if (!cancelled) setSchoolLabel('')
+      .catch((e: unknown) => {
+        if (!cancelled) {
+          setSchoolLabel('')
+          setError(getApiErrorMessage(e, 'Could not load school name'))
+        }
       })
     return () => {
       cancelled = true
@@ -85,9 +89,22 @@ export function AttendancePage() {
       setStudentDays(stu.days.map((d) => ({ attendance_date: d.attendance_date, boys_present: d.boys_present, girls_present: d.girls_present })))
       setStudentTotals(stu.totals)
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load attendance')
+      setError(getApiErrorMessage(e, 'Failed to load attendance'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  const runExport = async (fn: () => Promise<void>) => {
+    if (!schoolId.trim()) {
+      setError('Pick or enter a school ID.')
+      return
+    }
+    setError(null)
+    try {
+      await fn()
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e, 'Export failed'))
     }
   }
 
@@ -115,7 +132,7 @@ export function AttendancePage() {
       })
       await reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Save failed')
+      setError(getApiErrorMessage(err, 'Save failed'))
     } finally {
       setLoading(false)
     }
@@ -197,7 +214,9 @@ export function AttendancePage() {
           <button
             type="button"
             disabled={!schoolId.trim() || loading}
-            onClick={() => void downloadAttendanceExport({ school_id: schoolId.trim(), month, kind: 'teacher' })}
+            onClick={() =>
+              void runExport(() => downloadAttendanceExport({ school_id: schoolId.trim(), month, kind: 'teacher' }))
+            }
             className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
           >
             Export teacher CSV
@@ -205,7 +224,9 @@ export function AttendancePage() {
           <button
             type="button"
             disabled={!schoolId.trim() || loading}
-            onClick={() => void downloadAttendanceExport({ school_id: schoolId.trim(), month, kind: 'student' })}
+            onClick={() =>
+              void runExport(() => downloadAttendanceExport({ school_id: schoolId.trim(), month, kind: 'student' }))
+            }
             className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
           >
             Export student CSV
@@ -213,7 +234,9 @@ export function AttendancePage() {
           <button
             type="button"
             disabled={!schoolId.trim() || loading}
-            onClick={() => void downloadAttendanceExportXlsx({ school_id: schoolId.trim(), month, kind: 'teacher' })}
+            onClick={() =>
+              void runExport(() => downloadAttendanceExportXlsx({ school_id: schoolId.trim(), month, kind: 'teacher' }))
+            }
             className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
           >
             Export teacher Excel
@@ -221,7 +244,9 @@ export function AttendancePage() {
           <button
             type="button"
             disabled={!schoolId.trim() || loading}
-            onClick={() => void downloadAttendanceExportXlsx({ school_id: schoolId.trim(), month, kind: 'student' })}
+            onClick={() =>
+              void runExport(() => downloadAttendanceExportXlsx({ school_id: schoolId.trim(), month, kind: 'student' }))
+            }
             className="rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-section"
           >
             Export student Excel

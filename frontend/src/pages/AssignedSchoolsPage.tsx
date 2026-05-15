@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import { getSchools } from '../services/schoolsApi'
 import type { SchoolSummary } from '../types/school'
 
@@ -20,7 +21,7 @@ export function AssignedSchoolsPage() {
     setLoading(true)
     void getSchools({ limit: 100 })
       .then((r) => setItems(r.items))
-      .catch((e: Error) => setError(e.message))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load schools')))
       .finally(() => setLoading(false))
   }, [allowed])
 

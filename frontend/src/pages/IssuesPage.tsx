@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import {
   createIssue,
   createTask,
@@ -71,7 +72,7 @@ export function IssuesPage() {
       setTasks(t.items)
       setAnnouncements(a.items)
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed to load')
+      setErr(getApiErrorMessage(e, 'Failed to load'))
     } finally {
       setLoading(false)
     }
@@ -94,7 +95,7 @@ export function IssuesPage() {
       setMsg('Issue reported.')
       await load()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed')
+      setErr(getApiErrorMessage(e, 'Failed'))
     }
   }
 
@@ -112,7 +113,7 @@ export function IssuesPage() {
       setMsg('Task assigned.')
       await load()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed')
+      setErr(getApiErrorMessage(e, 'Failed'))
     }
   }
 
@@ -122,7 +123,7 @@ export function IssuesPage() {
       await patchIssue(row.id, { status })
       await load()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed')
+      setErr(getApiErrorMessage(e, 'Failed'))
     }
   }
 
@@ -134,7 +135,7 @@ export function IssuesPage() {
       await patchIssue(row.id, { assigned_to_user_id: raw })
       await load()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed')
+      setErr(getApiErrorMessage(e, 'Failed'))
     }
   }
 
@@ -144,7 +145,7 @@ export function IssuesPage() {
       await patchTask(row.id, { is_completed: !row.is_completed })
       await load()
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'Failed')
+      setErr(getApiErrorMessage(e, 'Failed'))
     }
   }
 

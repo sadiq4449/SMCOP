@@ -72,7 +72,7 @@ export function VisitFormPage() {
   useEffect(() => {
     void getKpis()
       .then(setKpis)
-      .catch(() => setError('Failed to load KPI catalog'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load KPI catalog')))
   }, [])
 
   useEffect(() => {
@@ -106,7 +106,7 @@ export function VisitFormPage() {
           setGpsLat(v.gps_latitude != null ? String(v.gps_latitude) : '')
           setGpsLng(v.gps_longitude != null ? String(v.gps_longitude) : '')
         })
-        .catch(() => setError('Could not load visit'))
+        .catch((e: unknown) => setError(getApiErrorMessage(e, 'Could not load visit')))
         .finally(() => setLoading(false))
     } else {
       setInfraLines(
@@ -375,6 +375,15 @@ export function VisitFormPage() {
       {isNew ? (
         <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-semibold text-text-primary">Start visit</h2>
+          {user.role === 'enumerator' && !schoolIdParam ? (
+            <p className="rounded-lg border border-amber-200/90 bg-amber-50/90 px-3 py-2.5 text-sm text-amber-950">
+              Open{' '}
+              <Link to="/dashboard/assigned-schools" className="font-semibold text-secondary underline-offset-2 hover:underline">
+                Assigned schools
+              </Link>{' '}
+              and use <span className="font-medium">New visit</span> so this page receives a school. The create button stays disabled until a school is selected.
+            </p>
+          ) : null}
           <p className="text-sm text-text-muted">
             School: <span className="font-mono text-text-secondary">{schoolIdParam || '— pick from Assigned schools'}</span>
           </p>

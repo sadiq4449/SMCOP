@@ -44,7 +44,7 @@ export function SchoolsListPage() {
     setUcId('')
     void getTalukas(districtId)
       .then(setTalukas)
-      .catch(() => setError('Failed to load talukas'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load talukas')))
   }, [districtId])
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function SchoolsListPage() {
     setUcId('')
     void getUnionCouncils(talukaId)
       .then(setUcs)
-      .catch(() => setError('Failed to load union councils'))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load union councils')))
   }, [talukaId])
 
   useEffect(() => {
@@ -74,7 +74,7 @@ export function SchoolsListPage() {
         setItems(res.items)
         setTotal(res.total)
       })
-      .catch((err: Error) => setError(err.message))
+      .catch((e: unknown) => setError(getApiErrorMessage(e, 'Failed to load schools')))
       .finally(() => setLoading(false))
   }, [canAccess, districtId, talukaId, ucId, search])
 

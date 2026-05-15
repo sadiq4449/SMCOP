@@ -64,8 +64,8 @@ export function ObservationsPage() {
       a.download = filename
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      setError('Download failed')
+    } catch (e) {
+      setError(getApiErrorMessage(e, 'Download failed'))
     }
   }
 

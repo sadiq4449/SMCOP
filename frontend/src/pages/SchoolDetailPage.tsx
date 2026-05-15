@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import { monthlyStudentAttendance, monthlyTeacherAttendance } from '../services/attendanceApi'
 import { listObservations } from '../services/observationsApi'
 import {
@@ -64,7 +65,7 @@ export function SchoolDetailPage() {
       setEnrollment(e)
       setTeachers(t)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load school')
+      setError(getApiErrorMessage(err, 'Failed to load school'))
     } finally {
       setLoading(false)
     }
@@ -134,7 +135,7 @@ export function SchoolDetailPage() {
       await deleteSchool(schoolId)
       navigate('/dashboard/schools')
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed')
+      alert(getApiErrorMessage(err, 'Delete failed'))
     }
   }
 
@@ -145,7 +146,7 @@ export function SchoolDetailPage() {
       await createEnrollment(schoolId, { quarter: qQuarter.trim(), boys: qBoys, girls: qGirls })
       await loadAll()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not add enrollment')
+      alert(getApiErrorMessage(err, 'Could not add enrollment'))
     }
   }
 
@@ -163,7 +164,7 @@ export function SchoolDetailPage() {
       setTSubject('')
       await loadAll()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Could not add teacher')
+      alert(getApiErrorMessage(err, 'Could not add teacher'))
     }
   }
 
@@ -173,7 +174,7 @@ export function SchoolDetailPage() {
       await deleteTeacher(schoolId, teacherId)
       await loadAll()
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Delete failed')
+      alert(getApiErrorMessage(err, 'Delete failed'))
     }
   }
 
@@ -186,8 +187,8 @@ export function SchoolDetailPage() {
       a.download = filename
       a.click()
       URL.revokeObjectURL(url)
-    } catch {
-      alert('Download failed')
+    } catch (e) {
+      alert(getApiErrorMessage(e, 'Download failed'))
     }
   }
 
