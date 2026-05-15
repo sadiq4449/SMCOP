@@ -177,8 +177,8 @@ export function IssuesPage() {
     void Promise.all(
       schoolIds.map((sid) =>
         listSchoolAssignees(sid, 'issue')
-          .then((opts) => [sid, opts] as const)
-          .catch(() => [sid, []] as const),
+          .then((opts): [string, AssigneeOption[]] => [sid, opts])
+          .catch((): [string, AssigneeOption[]] => [sid, []]),
       ),
     )
       .then((pairs) => {
