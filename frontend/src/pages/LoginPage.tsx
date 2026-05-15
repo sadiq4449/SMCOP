@@ -29,10 +29,10 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-section px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-muted-surface bg-surface p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded-ref-lg border border-white/10 bg-surface/90 p-8 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-md">
         <div className="mb-8 text-center">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-secondary">SMOCP Portal</p>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-accent">SMOCP Portal</p>
           <h1 className="mt-2 text-2xl font-semibold text-text-primary">Sign in to continue</h1>
           <p className="mt-2 text-sm text-text-muted">
             Government ERP access for school monitoring and reporting.
@@ -46,7 +46,7 @@ export function LoginPage() {
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
-              className="w-full rounded-lg border border-muted-surface bg-surface px-3 py-2 text-text-primary outline-none ring-secondary focus:ring-2"
+              className="w-full rounded-xl px-3 py-2.5 outline-none ring-primary/30 focus:ring-2"
               required
             />
           </label>
@@ -57,7 +57,7 @@ export function LoginPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
-              className="w-full rounded-lg border border-muted-surface bg-surface px-3 py-2 text-text-primary outline-none ring-secondary focus:ring-2"
+              className="w-full rounded-xl px-3 py-2.5 outline-none ring-primary/30 focus:ring-2"
               required
             />
           </label>
@@ -71,19 +71,19 @@ export function LoginPage() {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-70"
+            className="w-full rounded-xl bg-gradient-to-br from-primary to-secondary px-4 py-2.5 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(91,140,255,0.26)] transition hover:opacity-95 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {isSubmitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-text-secondary">
-          <Link to="/forgot-password" className="text-secondary hover:underline">
+          <Link to="/forgot-password" className="text-accent hover:text-primary hover:underline">
             Forgot password?
           </Link>
         </p>
 
-        <div className="mt-6 rounded-lg bg-section p-4 text-sm text-text-muted">
+        <div className="mt-6 rounded-xl border border-white/10 bg-surface-deep/40 p-4 text-sm text-text-muted">
           Demo users are seeded for each role. Example: <span className="text-text-secondary">superadmin@example.com</span> / <span className="text-text-secondary">Password123!</span>
         </div>
       </div>

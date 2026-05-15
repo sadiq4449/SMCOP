@@ -4,8 +4,8 @@
  */
 export function ApiRoutingHintPage() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-section px-6 py-12 text-center">
-      <p className="text-sm font-semibold uppercase tracking-wide text-secondary">SMOCP Portal</p>
+    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-12 text-center">
+      <p className="text-sm font-semibold uppercase tracking-wide text-accent">SMOCP Portal</p>
       <h1 className="mt-3 max-w-lg text-xl font-semibold text-text-primary">This URL should hit the API, not the web app</h1>
       <p className="mt-4 max-w-xl text-sm text-text-muted">
         Vercel returned the React bundle for an API path (for example <code className="text-text-secondary">/health/db</code>

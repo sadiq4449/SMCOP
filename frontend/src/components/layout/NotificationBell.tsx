@@ -86,7 +86,7 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={onToggle}
-        className="relative rounded-lg border border-muted-surface bg-surface px-3 py-2 text-sm font-medium text-text-primary hover:bg-section"
+        className="relative rounded-xl border border-white/10 bg-white/[0.06] px-3 py-2 text-sm font-medium text-text-primary shadow-sm backdrop-blur-sm hover:bg-white/10"
         aria-expanded={open}
         aria-label="Notifications"
       >
@@ -98,7 +98,7 @@ export function NotificationBell() {
         ) : null}
       </button>
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-muted-surface bg-surface shadow-lg">
+        <div className="absolute right-0 z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] rounded-xl border border-white/10 bg-surface/95 py-1 shadow-[0_18px_45px_rgba(0,0,0,0.35)] backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-muted-surface px-3 py-2">
             <p className="text-sm font-semibold text-text-primary">Notifications</p>
             <button type="button" className="text-xs text-secondary hover:underline" onClick={() => void onReadAll()}>
@@ -116,7 +116,7 @@ export function NotificationBell() {
                 key={n.id}
                 type="button"
                 onClick={() => (n.is_read ? undefined : void onReadOne(n.id))}
-                className={`block w-full border-b border-muted-surface px-3 py-2 text-left text-sm transition-colors hover:bg-section ${
+                className={`block w-full border-b border-white/5 px-3 py-2 text-left text-sm transition-colors hover:bg-white/[0.06] ${
                   n.is_read ? 'text-text-muted' : 'bg-section/50 text-text-primary'
                 }`}
               >

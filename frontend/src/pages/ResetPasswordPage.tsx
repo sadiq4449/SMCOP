@@ -33,8 +33,8 @@ export function ResetPasswordPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-section px-4 py-10">
-      <div className="w-full max-w-md rounded-2xl border border-muted-surface bg-surface p-8 shadow-lg">
+    <div className="flex min-h-screen items-center justify-center px-4 py-10">
+      <div className="w-full max-w-md rounded-ref-lg border border-white/10 bg-surface/90 p-8 shadow-[0_18px_45px_rgba(0,0,0,0.28)] backdrop-blur-md">
         <h1 className="text-xl font-semibold text-text-primary">Choose a new password</h1>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <label className="block">
@@ -43,23 +43,23 @@ export function ResetPasswordPage() {
               type="password"
               required
               minLength={8}
-              className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
+              className="mt-1 w-full rounded-xl px-3 py-2.5"
               value={password}
               onChange={(ev) => setPassword(ev.target.value)}
             />
           </label>
-          {msg ? <p className="text-sm text-[var(--color-success)]">{msg}</p> : null}
+          {msg ? <p className="text-sm text-success">{msg}</p> : null}
           {err ? <p className="text-sm text-danger">{err}</p> : null}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-70"
+            className="w-full rounded-xl bg-gradient-to-br from-primary to-secondary py-2.5 text-sm font-semibold text-white shadow-[0_14px_28px_rgba(91,140,255,0.26)] hover:opacity-95 disabled:opacity-60"
           >
             {busy ? 'Saving…' : 'Update password'}
           </button>
         </form>
         <p className="mt-4 text-center text-sm">
-          <Link to="/login" className="text-secondary hover:underline">
+          <Link to="/login" className="text-accent hover:text-primary hover:underline">
             Sign in
           </Link>
         </p>

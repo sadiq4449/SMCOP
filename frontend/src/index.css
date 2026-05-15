@@ -1,28 +1,72 @@
 @import 'tailwindcss';
 
+/*
+ * Design tokens aligned with ref_html_design.html (dark glass / indigo-violet UI).
+ * Semantic names map to existing Tailwind usage across the app.
+ */
 @theme {
-  --color-primary: #1e3a8a;
-  --color-secondary: #3b82f6;
-  --color-accent: #60a5fa;
-  --color-surface: #ffffff;
-  --color-section: #f8fafc;
-  --color-muted-surface: #f3f4f6;
-  --color-text-primary: #111827;
-  --color-text-secondary: #374151;
-  --color-text-muted: #6b7280;
-  --color-success: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-info: #3b82f6;
-  --font-sans: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  /* Surfaces (ref: --bg, --panel, --panel-2) */
+  --color-section: #0b1020;
+  --color-surface: #121933;
+  --color-muted-surface: #182244;
+  --color-surface-deep: #0f1730;
+
+  /* Brand (ref: --primary, --primary-2, --info) */
+  --color-primary: #5b8cff;
+  --color-secondary: #7a5cff;
+  --color-accent: #39c6ff;
+
+  /* Text (ref: --text, --muted) */
+  --color-text-primary: #eef3ff;
+  --color-text-secondary: #d9e3ff;
+  --color-text-muted: #a8b3cf;
+
+  /* Status (ref: --success, --warning, --danger, --info) */
+  --color-success: #21c37d;
+  --color-warning: #ffb020;
+  --color-danger: #ff5d73;
+  --color-info: #39c6ff;
+
+  /* Sidebar shell (between panel and panel-deep) */
+  --color-sidebar: #121933;
+  --color-sidebar-deep: #0c1225;
+
+  --font-sans: Inter, 'Segoe UI', system-ui, sans-serif;
+
+  --radius-ref: 1.125rem;
+  --radius-ref-lg: 1.5rem;
+  --shadow-ref: 0 18px 45px rgba(0, 0, 0, 0.28);
 }
 
 @layer base {
+  html {
+    @apply antialiased;
+  }
+
   body {
-    @apply m-0 min-h-screen bg-section font-sans text-text-primary antialiased;
+    @apply m-0 min-h-screen font-sans text-text-primary;
+    background-color: #0b1020;
+    background-image:
+      radial-gradient(circle at 0% 0%, rgba(91, 140, 255, 0.2) 0%, transparent 28%),
+      radial-gradient(circle at 100% 0%, rgba(122, 92, 255, 0.14) 0%, transparent 25%),
+      linear-gradient(180deg, #09101f 0%, #0b1020 100%);
+    background-attachment: fixed;
   }
 
   #root {
     @apply min-h-screen;
+  }
+
+  /* Form controls on dark panels */
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    @apply border-white/10 bg-surface-deep/60 text-text-primary placeholder:text-text-muted/70;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply border-primary/45 ring-2 ring-primary/25 outline-none;
   }
 }
