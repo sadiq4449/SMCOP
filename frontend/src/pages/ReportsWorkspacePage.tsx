@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { ReportSnapshotPanel } from '../components/reports/ReportSnapshotPanel'
 import { useAuth } from '../context/AuthContext'
+import { getApiErrorMessage } from '../services/api'
 import { getSchools } from '../services/schoolsApi'
 import {
   createReport,
@@ -11,7 +13,6 @@ import {
 } from '../services/reportsApi'
 import type { SchoolSummary } from '../types/school'
 import type { ReportSummary } from '../types/report'
-import { getApiErrorMessage } from '../services/api'
 
 const workspaceRoles = ['super_admin', 'enumerator', 'principal'] as const
 
@@ -384,10 +385,15 @@ export function ReportsWorkspacePage() {
             <p className="text-sm text-text-muted">Loading detail…</p>
           ) : (
             <>
-              <div className="rounded-lg bg-muted-surface/30 p-3 font-mono text-xs text-text-secondary">
-                <pre className="max-h-40 overflow-auto whitespace-pre-wrap">
-                  {JSON.stringify(selected.generated_snapshot ?? {}, null, 2)}
-                </pre>
+              <div className="rounded-xl border border-muted-surface bg-section/50 p-4">
+                <ReportSnapshotPanel snapshot={selected.generated_snapshot} />
+              </div>
+
+              <div className="border-t border-muted-surface pt-4">
+                <h3 className="text-sm font-semibold text-text-primary">Narrative (editable in draft)</h3>
+                <p className="mt-1 text-xs text-text-muted">
+                  Complete the sections below; they are included in exports when you save.
+                </p>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
