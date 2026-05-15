@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { useNavigate } from 'react-router-dom'
 
 import {
   getUnreadNotificationCount,
@@ -8,13 +10,47 @@ import {
   type NotificationRow,
 } from '../../services/operationalApi'
 
+function isReadRow(n: NotificationRow): boolean {
+  const v = n.is_read as unknown
+  return v === true || v === 'true' || v === 1
+}
+
+function routeForNotification(n: NotificationRow): string | null {
+  const ref = (n.ref_id ?? '').trim()
+  const rt = (n.ref_type ?? '').trim()
+  const kind = (n.kind ?? '').trim()
+
+  if (rt === 'visit' && ref) {
+    return `/dashboard/monitoring/${encodeURIComponent(ref)}`
+  }
+  if (rt === 'report' && kind === 'report_submitted') {
+    return '/dashboard/approvals'
+  }
+  if (rt === 'report' && kind === 'report_approved') {
+    return '/dashboard/reports'
+  }
+  if (rt === 'report' && ref) {
+    return '/dashboard/approvals'
+  }
+  if (rt === 'issue') {
+    return '/dashboard/issues'
+  }
+  if (rt === 'task') {
+    return '/dashboard/issues'
+  }
+  return null
+}
+
 export function NotificationBell() {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [count, setCount] = useState(0)
   const [items, setItems] = useState<NotificationRow[]>([])
   const [loading, setLoading] = useState(false)
   const [err, setErr] = useState<string | null>(null)
-  const wrapRef = useRef<HTMLDivElement>(null)
+  const anchorRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [panelStyle, setPanelStyle] = useState<React.CSSProperties>({})
 
   const refreshCount = useCallback(async () => {
     try {
@@ -38,6 +74,34 @@ export function NotificationBell() {
     }
   }, [])
 
+  const updatePanelPosition = useCallback(() => {
+    if (!open || !anchorRef.current) return
+    const r = anchorRef.current.getBoundingClientRect()
+    const w = Math.min(384, window.innerWidth - 32)
+    setPanelStyle({
+      position: 'fixed',
+      top: r.bottom + 8,
+      right: Math.max(16, window.innerWidth - r.right),
+      width: w,
+      zIndex: 200,
+    })
+  }, [open])
+
+  useLayoutEffect(() => {
+    updatePanelPosition()
+  }, [open, updatePanelPosition])
+
+  useEffect(() => {
+    if (!open) return
+    const onResize = () => updatePanelPosition()
+    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', onResize, true)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onResize, true)
+    }
+  }, [open, updatePanelPosition])
+
   useEffect(() => {
     void refreshCount()
     const t = window.setInterval(() => void refreshCount(), 60000)
@@ -46,7 +110,9 @@ export function NotificationBell() {
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false)
+      const t = e.target as Node
+      if (anchorRef.current?.contains(t) || panelRef.current?.contains(t)) return
+      setOpen(false)
     }
     document.addEventListener('click', onDoc)
     return () => document.removeEventListener('click', onDoc)
@@ -62,32 +128,113 @@ export function NotificationBell() {
   }
 
   const onReadOne = async (id: string) => {
-    try {
-      await markNotificationRead(id)
-      await refreshCount()
-      await loadList()
-    } catch (ex) {
-      setErr(ex instanceof Error ? ex.message : 'Failed')
-    }
+    await markNotificationRead(id)
+    await refreshCount()
+    await loadList()
   }
 
   const onReadAll = async () => {
+    setErr(null)
     try {
       await markAllNotificationsRead()
       await refreshCount()
       await loadList()
     } catch (ex) {
+      setErr(ex instanceof Error ? ex.message : 'Failed to mark all read')
+    }
+  }
+
+  const handleRowActivate = async (n: NotificationRow) => {
+    setErr(null)
+    try {
+      if (!isReadRow(n)) {
+        await onReadOne(n.id)
+      }
+      const path = routeForNotification(n)
+      if (path) {
+        navigate(path)
+        setOpen(false)
+      }
+    } catch (ex) {
       setErr(ex instanceof Error ? ex.message : 'Failed')
     }
   }
 
+  const dropdown =
+    open &&
+    createPortal(
+      <div
+        ref={panelRef}
+        style={panelStyle}
+        className="overflow-hidden rounded-xl border border-slate-200/90 bg-white/98 py-1 shadow-[0_12px_48px_rgb(15_23_42/0.18)] backdrop-blur-xl"
+        role="dialog"
+        aria-label="Notifications list"
+      >
+        <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
+          <div>
+            <p className="text-[13px] font-semibold text-text-primary">Notifications</p>
+            {count > 0 ? (
+              <p className="text-[11px] text-text-muted">
+                {count} unread · list shows recent (read and unread)
+              </p>
+            ) : (
+              <p className="text-[11px] text-text-muted">No unread · recent activity below</p>
+            )}
+          </div>
+          <button
+            type="button"
+            className="text-[11px] font-medium text-text-muted transition-colors hover:text-text-primary"
+            onClick={(e) => {
+              e.stopPropagation()
+              void onReadAll()
+            }}
+          >
+            Mark all read
+          </button>
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {loading ? <p className="p-3 text-sm text-text-muted">Loading…</p> : null}
+          {err ? <p className="p-3 text-sm text-danger">{err}</p> : null}
+          {!loading && items.length === 0 ? (
+            <p className="p-3 text-sm text-text-muted">No notifications yet.</p>
+          ) : null}
+          {items.map((n) => {
+            const read = isReadRow(n)
+            const hasLink = Boolean(routeForNotification(n))
+            return (
+              <button
+                key={n.id}
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  void handleRowActivate(n)
+                }}
+                className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 ${
+                  read ? 'text-text-muted' : 'bg-sky-50/80 text-text-primary'
+                }`}
+              >
+                <span className="font-medium">{n.title}</span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-text-secondary">{n.message}</span>
+                {hasLink ? (
+                  <span className="mt-1 block text-[11px] font-medium text-secondary">Open related page →</span>
+                ) : null}
+              </button>
+            )
+          })}
+        </div>
+      </div>,
+      document.body,
+    )
+
   return (
-    <div className="relative" ref={wrapRef}>
+    <div className="relative">
       <button
+        ref={anchorRef}
         type="button"
         onClick={onToggle}
         className="relative rounded-xl border border-slate-200/90 bg-white/90 px-3.5 py-2 text-[13px] font-medium text-text-primary shadow-[inset_0_1px_0_rgb(255_255_255/0.95)] transition-colors duration-200 hover:border-slate-300 hover:bg-slate-50"
         aria-expanded={open}
+        aria-haspopup="dialog"
         aria-label="Notifications"
       >
         Alerts
@@ -97,40 +244,7 @@ export function NotificationBell() {
           </span>
         ) : null}
       </button>
-      {open ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-96 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-slate-200/90 bg-white/95 py-1 shadow-[0_12px_48px_rgb(15_23_42/0.12)] backdrop-blur-xl">
-          <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5">
-            <p className="text-[13px] font-semibold text-text-primary">Notifications</p>
-            <button
-              type="button"
-              className="text-[11px] font-medium text-text-muted transition-colors hover:text-text-primary"
-              onClick={() => void onReadAll()}
-            >
-              Mark all read
-            </button>
-          </div>
-          <div className="max-h-80 overflow-y-auto">
-            {loading ? <p className="p-3 text-sm text-text-muted">Loading…</p> : null}
-            {err ? <p className="p-3 text-sm text-danger">{err}</p> : null}
-            {!loading && items.length === 0 ? (
-              <p className="p-3 text-sm text-text-muted">No notifications yet.</p>
-            ) : null}
-            {items.map((n) => (
-              <button
-                key={n.id}
-                type="button"
-                onClick={() => (n.is_read ? undefined : void onReadOne(n.id))}
-                className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 ${
-                  n.is_read ? 'text-text-muted' : 'bg-slate-50/50 text-text-primary'
-                }`}
-              >
-                <span className="font-medium">{n.title}</span>
-                <span className="mt-0.5 block text-xs leading-relaxed text-text-secondary">{n.message}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
+      {dropdown}
     </div>
   )
 }

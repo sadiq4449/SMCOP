@@ -96,7 +96,7 @@ def notify_visit_finalized(visit_id: str, school_id: str) -> None:
         recipients.extend(_principals_for_school(db, sid))
         seen: set[UUID] = set()
         title = "Visit submitted"
-        msg = f"Monitoring visit for «{school_name}» was finalized (visit {vid})."
+        msg = f"Monitoring visit for «{school_name}» was finalized (visit {str(vid)[:8]}…)."
         for u in recipients:
             if u.id in seen:
                 continue
@@ -189,7 +189,7 @@ def notify_issue_assigned(issue_id: str, assignee_id: str) -> None:
         if not user:
             return
         title = "Issue assigned to you"
-        msg = f"You were assigned issue {iid}."
+        msg = f"You were assigned issue {str(iid)[:8]}… (open Issues & tasks)."
         push_notification(db, user_id=aid, title=title, message=msg, kind="issue_assigned", ref_type="issue", ref_id=str(iid))
         send_email_best_effort(user.email, title, msg)
 
@@ -208,7 +208,7 @@ def notify_task_assigned(task_id: str, assignee_id: str) -> None:
         if not user:
             return
         title = "Task assigned"
-        msg = f"A new task was assigned to you ({tid})."
+        msg = f"A new task was assigned to you (ref {str(tid)[:8]}… — open Issues & tasks)."
         push_notification(db, user_id=aid, title=title, message=msg, kind="task_assigned", ref_type="task", ref_id=str(tid))
         send_email_best_effort(user.email, title, msg)
 
