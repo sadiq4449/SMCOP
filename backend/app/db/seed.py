@@ -2,9 +2,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.security import hash_password
+from app.models.partner_org import PartnerOrg
 from app.models.user import User, UserRole, UserStatus
 
-DEMO_USERS: list[dict[str, str]] = [
+DEMO_USERS: list[dict[str, object]] = [
     {
         "full_name": "Super Admin",
         "email": "superadmin@example.com",
@@ -12,52 +13,52 @@ DEMO_USERS: list[dict[str, str]] = [
         "role": UserRole.SUPER_ADMIN,
     },
     {
-        "full_name": "Government User",
+        "full_name": "PPP Node (Government)",
         "email": "government@example.com",
         "password": "Password123!",
         "role": UserRole.GOVERNMENT,
     },
     {
-        "full_name": "District Education Officer",
-        "email": "deo@example.com",
+        "full_name": "Independent Evaluator",
+        "email": "ie@example.com",
         "password": "Password123!",
-        "role": UserRole.DEO,
-    },
-    {
-        "full_name": "Field Enumerator",
-        "email": "enumerator@example.com",
-        "password": "Password123!",
-        "role": UserRole.ENUMERATOR,
-    },
-    {
-        "full_name": "School Principal",
-        "email": "principal@example.com",
-        "password": "Password123!",
-        "role": UserRole.PRINCIPAL,
-    },
-    {
-        "full_name": "School Teacher",
-        "email": "teacher@example.com",
-        "password": "Password123!",
-        "role": UserRole.TEACHER,
+        "role": UserRole.IE,
     },
 ]
 
 
 def seed_demo_users(db: Session) -> None:
-    for demo_user in DEMO_USERS:
-        exists = db.scalar(select(User.id).where(User.email == demo_user["email"]))
+    rows: list[dict[str, object]] = list(DEMO_USERS)
+    partner_id = db.scalar(select(PartnerOrg.id).limit(1))
+    if partner_id:
+        rows.append(
+            {
+                "full_name": "Partner Organization",
+                "email": "partner@example.com",
+                "password": "Password123!",
+                "role": UserRole.PARTNER,
+                "partner_org_id": partner_id,
+            },
+        )
+
+    for demo in rows:
+        email = str(demo["email"])
+        exists = db.scalar(select(User.id).where(User.email == email))
         if exists:
             continue
 
+        role = demo["role"]
+        partner_org_id = demo.get("partner_org_id")
+
         db.add(
             User(
-                full_name=demo_user["full_name"],
-                email=demo_user["email"],
-                password_hash=hash_password(demo_user["password"]),
-                role=demo_user["role"],
+                full_name=str(demo["full_name"]),
+                email=email,
+                password_hash=hash_password(str(demo["password"])),
+                role=role,  # type: ignore[arg-type]
                 status=UserStatus.ACTIVE,
-            )
+                partner_org_id=partner_org_id,  # type: ignore[arg-type]
+            ),
         )
 
     db.commit()

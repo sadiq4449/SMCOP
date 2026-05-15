@@ -14,7 +14,7 @@ import {
 import type { SchoolSummary } from '../types/school'
 import type { ReportSummary } from '../types/report'
 
-const workspaceRoles = ['super_admin', 'enumerator', 'principal'] as const
+const workspaceRoles = ['super_admin', 'ie', 'government', 'partner'] as const
 
 function shortenId(id: string) {
   if (id.length <= 12) return id
@@ -54,8 +54,12 @@ export function ReportsWorkspacePage() {
   const [formDaily, setFormDaily] = useState('')
   const [saveBusy, setSaveBusy] = useState(false)
 
+  const role = user?.role
+
   const canUse =
-    user && (workspaceRoles as readonly string[]).includes(user.role)
+    !!user && (workspaceRoles as readonly string[]).includes(user.role)
+
+  const canCreateDraft = role === 'super_admin' || role === 'ie'
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSchoolQ(schoolSearch.trim()), 280)
@@ -158,6 +162,11 @@ export function ReportsWorkspacePage() {
 
   const draftEditable = selected?.status === 'draft'
 
+  const canPatchReportBody =
+    role === 'super_admin' || (role === 'ie' && draftEditable)
+  const canSubmitDraft =
+    draftEditable && (role === 'super_admin' || role === 'ie')
+
   const onSaveBody = async () => {
     if (!selected) return
     setSaveBusy(true)
@@ -232,8 +241,8 @@ export function ReportsWorkspacePage() {
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Reporting</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">Quarterly reports</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Draft reports pull KPIs, observations, and attendance slices from finalized visits. Submit when ready for DEO
-          review.
+          Draft reports pull KPIs, observations, and attendance slices from finalized visits. IE drafts submit for Super
+          Admin review; PPP Node and partners have read/export access in scope.
         </p>
       </header>
 
@@ -249,57 +258,64 @@ export function ReportsWorkspacePage() {
         </label>
       </div>
 
-      <section className="rounded-2xl border border-muted-surface bg-surface p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-text-primary">Create report</h2>
-        <p className="mt-1 text-xs text-text-muted">Requires access to the school (assigned schools or super admin).</p>
-        <div className="mt-3 space-y-2">
-          <label className="block text-xs font-medium text-text-secondary">
-            Find school (name or EMIS)
-            <input
-              value={schoolSearch}
-              onChange={(e) => setSchoolSearch(e.target.value)}
-              placeholder="Type to search…"
-              className="mt-1 block w-full max-w-md rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
-            />
-          </label>
-          <div className="flex flex-wrap gap-3">
-            <label className="flex min-w-[min(100%,280px)] flex-1 flex-col text-xs font-medium text-text-secondary">
-              School
-              <select
-                value={newSchoolId}
-                onChange={(e) => setNewSchoolId(e.target.value)}
-                disabled={schoolPickerLoading}
-                className="mt-1 rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary disabled:opacity-50"
-              >
-                <option value="">{schoolPickerLoading ? 'Loading schools…' : 'Choose a school…'}</option>
-                {schoolPickList.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} — EMIS {s.emis_code} ({s.district_name})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col text-xs font-medium text-text-secondary">
-              Quarter for new draft
+      {canCreateDraft ? (
+        <section className="rounded-2xl border border-muted-surface bg-surface p-4 shadow-sm">
+          <h2 className="text-sm font-semibold text-text-primary">Create report</h2>
+          <p className="mt-1 text-xs text-text-muted">Requires access to the school (assigned schools or super admin).</p>
+          <div className="mt-3 space-y-2">
+            <label className="block text-xs font-medium text-text-secondary">
+              Find school (name or EMIS)
               <input
-                value={newQuarter}
-                onChange={(e) => setNewQuarter(e.target.value)}
-                placeholder="Quarter"
-                className="mt-1 w-32 rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                value={schoolSearch}
+                onChange={(e) => setSchoolSearch(e.target.value)}
+                placeholder="Type to search…"
+                className="mt-1 block w-full max-w-md rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
               />
             </label>
+            <div className="flex flex-wrap gap-3">
+              <label className="flex min-w-[min(100%,280px)] flex-1 flex-col text-xs font-medium text-text-secondary">
+                School
+                <select
+                  value={newSchoolId}
+                  onChange={(e) => setNewSchoolId(e.target.value)}
+                  disabled={schoolPickerLoading}
+                  className="mt-1 rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary disabled:opacity-50"
+                >
+                  <option value="">{schoolPickerLoading ? 'Loading schools…' : 'Choose a school…'}</option>
+                  {schoolPickList.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} — EMIS {s.emis_code} ({s.district_name})
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex flex-col text-xs font-medium text-text-secondary">
+                Quarter for new draft
+                <input
+                  value={newQuarter}
+                  onChange={(e) => setNewQuarter(e.target.value)}
+                  placeholder="Quarter"
+                  className="mt-1 w-32 rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                />
+              </label>
+            </div>
+            <button
+              type="button"
+              disabled={createBusy}
+              onClick={() => void onCreate()}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
+            >
+              {createBusy ? 'Creating…' : 'Create draft'}
+            </button>
+            <p className="text-xs text-text-muted">New-draft quarter matches the list filter until you edit it.</p>
           </div>
-          <button
-            type="button"
-            disabled={createBusy}
-            onClick={() => void onCreate()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
-          >
-            {createBusy ? 'Creating…' : 'Create draft'}
-          </button>
-          <p className="text-xs text-text-muted">New-draft quarter matches the list filter until you edit it.</p>
-        </div>
-      </section>
+        </section>
+      ) : (
+        <p className="rounded-2xl border border-muted-surface bg-surface px-4 py-3 text-sm text-text-muted">
+          New quarterly drafts are created by Independent Evaluators (or Super Admin). Use the list below to open reports in
+          your scope.
+        </p>
+      )}
 
       {error ? (
         <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
@@ -390,9 +406,9 @@ export function ReportsWorkspacePage() {
               </div>
 
               <div className="border-t border-muted-surface pt-4">
-                <h3 className="text-sm font-semibold text-text-primary">Narrative (editable in draft)</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Narrative</h3>
                 <p className="mt-1 text-xs text-text-muted">
-                  Complete the sections below; they are included in exports when you save.
+                  Super Admin may edit anytime; IE edits while status is draft. Exports include saved narrative fields.
                 </p>
               </div>
 
@@ -401,7 +417,7 @@ export function ReportsWorkspacePage() {
                   <span className="font-medium text-text-secondary">Summary</span>
                   <textarea
                     value={formSummary}
-                    disabled={!draftEditable && user.role !== 'super_admin'}
+                    disabled={!canPatchReportBody}
                     onChange={(e) => setFormSummary(e.target.value)}
                     rows={4}
                     className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary disabled:bg-muted-surface/50"
@@ -411,7 +427,7 @@ export function ReportsWorkspacePage() {
                   <span className="font-medium text-text-secondary">Recommendations</span>
                   <textarea
                     value={formRec}
-                    disabled={!draftEditable && user.role !== 'super_admin'}
+                    disabled={!canPatchReportBody}
                     onChange={(e) => setFormRec(e.target.value)}
                     rows={4}
                     className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary disabled:bg-muted-surface/50"
@@ -421,7 +437,7 @@ export function ReportsWorkspacePage() {
                   <span className="font-medium text-text-secondary">Principal — infrastructure notes</span>
                   <textarea
                     value={formInfra}
-                    disabled={!draftEditable && user.role !== 'super_admin'}
+                    disabled={!canPatchReportBody}
                     onChange={(e) => setFormInfra(e.target.value)}
                     rows={4}
                     className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary disabled:bg-muted-surface/50"
@@ -431,7 +447,7 @@ export function ReportsWorkspacePage() {
                   <span className="font-medium text-text-secondary">Principal — daily activity notes</span>
                   <textarea
                     value={formDaily}
-                    disabled={!draftEditable && user.role !== 'super_admin'}
+                    disabled={!canPatchReportBody}
                     onChange={(e) => setFormDaily(e.target.value)}
                     rows={4}
                     className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary disabled:bg-muted-surface/50"
@@ -442,20 +458,20 @@ export function ReportsWorkspacePage() {
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  disabled={saveBusy || (!draftEditable && user.role !== 'super_admin')}
+                  disabled={saveBusy || !canPatchReportBody}
                   onClick={() => void onSaveBody()}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
                 >
                   Save fields
                 </button>
-                {draftEditable ? (
+                {canSubmitDraft ? (
                   <button
                     type="button"
                     disabled={saveBusy}
                     onClick={() => void onSubmitForReview()}
                     className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:bg-primary disabled:opacity-50"
                   >
-                    Submit for DEO review
+                    Submit for Super Admin review
                   </button>
                 ) : null}
                 {user.role === 'super_admin' && selected.status === 'rejected' ? (

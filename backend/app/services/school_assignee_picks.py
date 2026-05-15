@@ -15,7 +15,7 @@ def assignee_valid_for_issue(db: Session, school_id: UUID, assignee_id: UUID) ->
     u = db.get(User, assignee_id)
     if u is None or u.status != UserStatus.ACTIVE:
         return False
-    if u.role not in (UserRole.PRINCIPAL, UserRole.DEO, UserRole.SUPER_ADMIN):
+    if u.role not in (UserRole.IE, UserRole.GOVERNMENT, UserRole.SUPER_ADMIN):
         return False
     return user_can_access_school(db, u, school_id)
 
@@ -24,7 +24,7 @@ def assignee_valid_for_task(db: Session, school_id: UUID, assignee_id: UUID) -> 
     u = db.get(User, assignee_id)
     if u is None or u.status != UserStatus.ACTIVE:
         return False
-    if u.role not in (UserRole.PRINCIPAL, UserRole.TEACHER):
+    if u.role != UserRole.IE:
         return False
     return user_can_access_school(db, u, school_id)
 
@@ -32,16 +32,13 @@ def assignee_valid_for_task(db: Session, school_id: UUID, assignee_id: UUID) -> 
 def issue_assignee_candidates(db: Session, school_id: UUID) -> list[User]:
     stmt = select(User).where(
         User.status == UserStatus.ACTIVE,
-        User.role.in_((UserRole.PRINCIPAL, UserRole.DEO, UserRole.SUPER_ADMIN)),
+        User.role.in_((UserRole.IE, UserRole.GOVERNMENT, UserRole.SUPER_ADMIN)),
     )
     rows = db.scalars(stmt).all()
     return [u for u in rows if user_can_access_school(db, u, school_id)]
 
 
 def task_assignee_candidates(db: Session, school_id: UUID) -> list[User]:
-    stmt = select(User).where(
-        User.status == UserStatus.ACTIVE,
-        User.role.in_((UserRole.PRINCIPAL, UserRole.TEACHER)),
-    )
+    stmt = select(User).where(User.status == UserStatus.ACTIVE, User.role == UserRole.IE)
     rows = db.scalars(stmt).all()
     return [u for u in rows if user_can_access_school(db, u, school_id)]

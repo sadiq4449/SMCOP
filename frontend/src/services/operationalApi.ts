@@ -67,7 +67,7 @@ export async function createIssue(body: {
   return data.data
 }
 
-export async function patchIssue(id: string, body: { status?: string; assigned_to_user_id?: string | null }) {
+export async function patchIssue(id: string, body: { status?: string; assigned_to_user_id?: string | null; comment?: string }) {
   const { data } = await apiClient.patch<ApiResponse<IssueRow>>(`/issues/${id}`, body)
   if (!data.success || !data.data) throw new Error(data.message || 'Failed to update issue')
   return data.data

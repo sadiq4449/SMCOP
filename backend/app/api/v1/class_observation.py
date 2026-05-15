@@ -146,7 +146,7 @@ def create_observation(
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[ClassroomObservationOut]:
-    if current_user.role in (UserRole.GOVERNMENT, UserRole.PRINCIPAL, UserRole.TEACHER):
+    if current_user.role in (UserRole.GOVERNMENT, UserRole.PARTNER):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={

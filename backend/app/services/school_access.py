@@ -1,8 +1,4 @@
-"""School row visibility derived from user role and assignment fields (Iteration 3).
-
-Used by ``app.api.v1.schools`` list/detail and nested resources so Enumerators,
-Principals, Teachers, and DEO accounts only see schools within their scope.
-"""
+"""School row visibility derived from user role and assignment fields."""
 
 from __future__ import annotations
 
@@ -39,13 +35,12 @@ def school_scope_filters(user: User) -> list:
     if user.role in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
         return []
 
-    if user.role == UserRole.DEO:
-        if user.district_id is None:
+    if user.role == UserRole.PARTNER:
+        if user.partner_org_id is None:
             return [false()]
-        uc_subq = select(UnionCouncil.id).join(Taluka).where(Taluka.district_id == user.district_id)
-        return [School.uc_id.in_(uc_subq)]
+        return [School.partner_org_id == user.partner_org_id]
 
-    if user.role in (UserRole.ENUMERATOR, UserRole.PRINCIPAL, UserRole.TEACHER):
+    if user.role == UserRole.IE:
         ids = parse_assigned_school_ids(user.assigned_schools)
         if not ids:
             return [false()]

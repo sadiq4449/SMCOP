@@ -5,21 +5,14 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
-import { getDistricts, getPartnerOrgs, getSchool, getSchools } from '../services/schoolsApi'
+import { getPartnerOrgs, getSchool, getSchools } from '../services/schoolsApi'
 import { createUser, getUser, updateUser } from '../services/usersApi'
 import type { UserRole } from '../types/auth'
-import type { District, PartnerOrg, SchoolDetail, SchoolSummary } from '../types/school'
+import type { PartnerOrg, SchoolDetail, SchoolSummary } from '../types/school'
 
-const ROLE_OPTIONS: UserRole[] = [
-  'super_admin',
-  'government',
-  'deo',
-  'enumerator',
-  'principal',
-  'teacher',
-]
+const ROLE_OPTIONS: UserRole[] = ['super_admin', 'government', 'ie', 'partner']
 
-const SCHOOL_ROLES: UserRole[] = ['enumerator', 'principal', 'teacher']
+const IE_ROLE: UserRole = 'ie'
 
 function schoolDetailToSummary(s: SchoolDetail): SchoolSummary {
   return {
@@ -46,7 +39,6 @@ export function UserFormPage() {
   const { user } = useAuth()
   const isEdit = Boolean(userId)
 
-  const [districts, setDistricts] = useState<District[]>([])
   const [partners, setPartners] = useState<PartnerOrg[]>([])
   const [schoolSearch, setSchoolSearch] = useState('')
   const [schoolChoices, setSchoolChoices] = useState<SchoolSummary[]>([])
@@ -54,11 +46,9 @@ export function UserFormPage() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [role, setRole] = useState<UserRole>('enumerator')
+  const [role, setRole] = useState<UserRole>('ie')
   const [status, setStatus] = useState('active')
   const [partnerOrgId, setPartnerOrgId] = useState('')
-  const [districtId, setDistrictId] = useState('')
-  const [linkedTeacherId, setLinkedTeacherId] = useState('')
   const [assignedSchoolIds, setAssignedSchoolIds] = useState<Set<string>>(() => new Set())
   const assignedSchoolIdsRef = useRef(assignedSchoolIds)
   assignedSchoolIdsRef.current = assignedSchoolIds
@@ -66,16 +56,7 @@ export function UserFormPage() {
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [districtsError, setDistrictsError] = useState<string | null>(null)
   const [partnersError, setPartnersError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (user?.role !== 'super_admin') return
-    setDistrictsError(null)
-    void getDistricts()
-      .then(setDistricts)
-      .catch((e: unknown) => setDistrictsError(getApiErrorMessage(e, 'Failed to load districts')))
-  }, [user?.role])
 
   useEffect(() => {
     if (user?.role !== 'super_admin') return
@@ -87,7 +68,7 @@ export function UserFormPage() {
 
   useEffect(() => {
     if (user?.role !== 'super_admin') return
-    if (!SCHOOL_ROLES.includes(role)) return
+    if (role !== IE_ROLE) return
     let cancelled = false
     const h = window.setTimeout(() => {
       void getSchools({ q: schoolSearch.trim() || undefined, limit: 100 })
@@ -125,14 +106,12 @@ export function UserFormPage() {
         if (cancelled) return
         setFullName(u.full_name)
         setEmail(u.email)
-        setRole(u.role)
+        setRole(u.role as UserRole)
         setStatus(u.status)
         setPartnerOrgId(u.partner_org_id ?? '')
-        setDistrictId(u.district_id ?? '')
-        setLinkedTeacherId(u.linked_teacher_id ?? '')
         setAssignedSchoolIds(new Set(u.assigned_schools))
 
-        const needsHydration = u.assigned_schools.length > 0 && SCHOOL_ROLES.includes(u.role)
+        const needsHydration = u.assigned_schools.length > 0 && u.role === 'ie'
         if (!needsHydration) return
 
         const summaries = (
@@ -169,9 +148,8 @@ export function UserFormPage() {
     })
   }
 
-  const showDistrict = role === 'deo'
-  const showSchoolPicker = SCHOOL_ROLES.includes(role)
-  const showDistrictPicker = showDistrict || showSchoolPicker
+  const showSchoolPicker = role === IE_ROLE
+  const showPartnerOrgPicker = role === 'partner'
 
   const selectedSchoolLabels = useMemo(() => {
     const map = new Map(schoolChoices.map((s) => [s.id, s.name]))
@@ -185,41 +163,24 @@ export function UserFormPage() {
       setError('Password must be at least 6 characters')
       return
     }
+    if (role === 'partner' && !partnerOrgId.trim()) {
+      setError('Partner accounts must have a partner organization selected.')
+      return
+    }
 
     const body: Record<string, unknown> = {
       full_name: fullName.trim(),
       email: email.trim(),
       role,
       status,
-      partner_org_id: partnerOrgId || null,
+      partner_org_id: showPartnerOrgPicker ? partnerOrgId.trim() || null : null,
+      assigned_schools: showSchoolPicker ? [...assignedSchoolIds] : [],
     }
 
     if (!isEdit) {
       body.password = password
-      if (role === 'deo') {
-        body.district_id = districtId.trim() || null
-      } else if (SCHOOL_ROLES.includes(role)) {
-        body.district_id = districtId.trim() || null
-      } else {
-        body.district_id = null
-      }
-      body.assigned_schools = showSchoolPicker ? [...assignedSchoolIds] : []
-      if (role === 'teacher') {
-        body.linked_teacher_id = linkedTeacherId.trim() || null
-      }
-    } else {
-      if (showDistrictPicker) {
-        body.district_id = districtId.trim() || null
-      }
-      if (showSchoolPicker) {
-        body.assigned_schools = [...assignedSchoolIds]
-      }
-      if (role === 'teacher') {
-        body.linked_teacher_id = linkedTeacherId.trim() || null
-      }
-      if (password.trim()) {
-        body.password = password.trim()
-      }
+    } else if (password.trim()) {
+      body.password = password.trim()
     }
 
     setSaving(true)
@@ -260,18 +221,14 @@ export function UserFormPage() {
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Administration</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">{isEdit ? 'Edit user' : 'New user'}</h1>
         <p className="mt-1 text-sm text-text-muted">
-          Credentials, role, district scope for DEO accounts, partner linkage, and assigned schools for field roles.
+          SMCOP roles: Super Admin, PPP Node (Government), Independent Evaluator (school assignments), Partner organization
+          (read-only org scope).
         </p>
       </header>
 
-      {error || districtsError || partnersError ? (
+      {error || partnersError ? (
         <div className="space-y-2" role="alert">
-          {error ? (
-            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p>
-          ) : null}
-          {districtsError ? (
-            <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{districtsError}</p>
-          ) : null}
+          {error ? <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{error}</p> : null}
           {partnersError ? (
             <p className="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{partnersError}</p>
           ) : null}
@@ -339,68 +296,31 @@ export function UserFormPage() {
             </select>
           </label>
 
-          <label className="block text-sm md:col-span-2">
-            <span className="mb-1 block font-medium text-text-secondary">Partner organization (optional)</span>
-            <select
-              value={partnerOrgId}
-              onChange={(e) => setPartnerOrgId(e.target.value)}
-              className="w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
-            >
-              <option value="">None</option>
-              {partners.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          {showDistrictPicker ? (
+          {showPartnerOrgPicker ? (
             <label className="block text-sm md:col-span-2">
-              <span className="mb-1 block font-medium text-text-secondary">
-                {showDistrict ? 'District scope (required for DEO)' : 'Primary district (optional)'}
-              </span>
-              <p className="mb-2 text-xs text-text-muted">
-                {showDistrict
-                  ? 'DEO dashboards and approvals are limited to this district.'
-                  : 'If set before any school is assigned, DEOs in that district can attach in-district schools without Super Admin.'}
-              </p>
+              <span className="mb-1 block font-medium text-text-secondary">Partner organization (required)</span>
               <select
-                value={districtId}
-                onChange={(e) => setDistrictId(e.target.value)}
-                required={showDistrict}
+                required
+                value={partnerOrgId}
+                onChange={(e) => setPartnerOrgId(e.target.value)}
                 className="w-full rounded-lg border border-muted-surface px-3 py-2 text-text-primary"
               >
-                <option value="">{showDistrict ? 'Select district…' : 'None / not tied to one district'}</option>
-                {districts.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
+                <option value="">Select partner organization…</option>
+                {partners.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
                   </option>
                 ))}
               </select>
             </label>
           ) : null}
 
-          {role === 'teacher' ? (
-            <label className="block text-sm md:col-span-2">
-              <span className="mb-1 block font-medium text-text-secondary">
-                Linked teacher profile UUID (optional — required for self-service attendance)
-              </span>
-              <input
-                value={linkedTeacherId}
-                onChange={(e) => setLinkedTeacherId(e.target.value)}
-                placeholder="Teacher row UUID from the school profile"
-                className="w-full rounded-lg border border-muted-surface px-3 py-2 font-mono text-sm text-text-primary"
-              />
-            </label>
-          ) : null}
-
           {showSchoolPicker ? (
             <div className="md:col-span-2 space-y-3 rounded-xl border border-muted-surface bg-section/40 p-4">
               <div>
-                <h3 className="text-sm font-semibold text-text-primary">Assigned schools</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Assigned schools (IE)</h3>
                 <p className="mt-1 text-xs text-text-muted">
-                  Search and tick schools this account may access. Lists are enforced on school APIs.
+                  Independent Evaluators may only access visits and reporting for schools listed here.
                 </p>
               </div>
               <input

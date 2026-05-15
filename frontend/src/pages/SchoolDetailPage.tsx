@@ -32,7 +32,7 @@ export function SchoolDetailPage() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
   const isGovernment = user?.role === 'government'
-  const isDeoUser = user?.role === 'deo'
+  const canViewAttendanceRollups = isGovernment || isSuperAdmin
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +91,7 @@ export function SchoolDetailPage() {
   }, [schoolId])
 
   useEffect(() => {
-    if (!schoolId || (!isGovernment && !isDeoUser)) return
+    if (!schoolId || !canViewAttendanceRollups) return
     let cancelled = false
     setAttBusy(true)
     void Promise.all([
@@ -127,7 +127,7 @@ export function SchoolDetailPage() {
     return () => {
       cancelled = true
     }
-  }, [schoolId, attMonth, isGovernment, isDeoUser])
+  }, [schoolId, attMonth, canViewAttendanceRollups])
 
   const handleDeleteSchool = async () => {
     if (!schoolId || !window.confirm('Delete this school and related enrollment/teachers?')) return
@@ -367,7 +367,7 @@ export function SchoolDetailPage() {
         </div>
       </section>
 
-      {isGovernment || isDeoUser ? (
+      {canViewAttendanceRollups ? (
         <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
@@ -441,7 +441,9 @@ export function SchoolDetailPage() {
             <h2 className="text-lg font-semibold text-text-primary">Classroom observations</h2>
             <p className="mt-1 text-xs text-text-muted">Latest observations captured during monitoring visits for this school.</p>
           </div>
-          {(user?.role === 'enumerator' || user?.role === 'deo' || user?.role === 'principal') && schoolId ? (
+          {schoolId &&
+          user &&
+          ['ie', 'government', 'partner', 'super_admin'].includes(user.role) ? (
             <Link to="/dashboard/observations" className="text-sm font-semibold text-secondary hover:text-primary">
               Full list →
             </Link>

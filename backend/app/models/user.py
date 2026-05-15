@@ -13,10 +13,8 @@ from app.models.base import Base
 class UserRole(str, enum.Enum):
     SUPER_ADMIN = "super_admin"
     GOVERNMENT = "government"
-    DEO = "deo"
-    ENUMERATOR = "enumerator"
-    PRINCIPAL = "principal"
-    TEACHER = "teacher"
+    IE = "ie"
+    PARTNER = "partner"
 
 
 class UserStatus(str, enum.Enum):

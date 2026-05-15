@@ -30,8 +30,8 @@ def can_mutate_observation(db: Session, user: User, observation: ClassroomObserv
 
 
 def can_review_observation_comments(db: Session, user: User, observation: ClassroomObservation) -> bool:
-    """DEO may attach reviewer comments on finalized visits within district."""
-    if user.role != UserRole.DEO:
+    """PPP Node / Super Admin may attach reviewer comments on finalized visits they can read."""
+    if user.role not in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
         return False
     visit = db.get(Visit, observation.visit_id)
     if not visit:

@@ -108,15 +108,6 @@ def create_report(
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[ReportOut]:
-    if current_user.role == UserRole.TEACHER:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "success": False,
-                "message": "Teachers cannot create quarterly reports.",
-                "errors": {"report": "forbidden"},
-            },
-        )
     school_uuid = UUID(payload.school_id)
     if not can_create_report(db, current_user, school_uuid):
         raise HTTPException(
@@ -185,16 +176,10 @@ def list_reports(
     district_id: UUID | None = None,
     status_filter: ReportStatus | None = Query(None, alias="status"),
 ) -> APIResponse[PaginatedReports]:
-    if current_user.role == UserRole.TEACHER:
-        raise _forbidden()
-
     stmt = reports_select_filtered(current_user)
 
     if district_id is not None:
-        if current_user.role == UserRole.DEO:
-            if current_user.district_id != district_id:
-                raise _forbidden()
-        elif current_user.role not in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
+        if current_user.role not in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
             raise _forbidden()
         uc_subq = select(UnionCouncil.id).join(Taluka).where(Taluka.district_id == district_id)
         school_filter = select(School.id).where(School.uc_id.in_(uc_subq))
@@ -272,9 +257,6 @@ def compare_quarters(
     quarters: str = Query(..., description="Comma-separated quarters e.g. Q1-2026,Q2-2026"),
 ) -> APIResponse[CompareQuartersOut]:
     """Quarter-over-quarter metrics for one school."""
-    if current_user.role == UserRole.TEACHER:
-        raise _forbidden()
-
     if not user_can_view_school_for_compare(db, current_user, school_id):
         raise _forbidden()
 
@@ -311,9 +293,6 @@ def compare_reports(
     quarter: str = Query(..., min_length=5, max_length=20),
     school_ids: str = Query(..., description="Comma-separated school UUIDs"),
 ) -> APIResponse[CompareReportsOut]:
-    if current_user.role == UserRole.TEACHER:
-        raise _forbidden()
-
     try:
         norm_q = normalize_quarter(quarter)
     except ValueError as exc:
@@ -341,8 +320,6 @@ def compare_reports(
 
 @router.get("/{report_id}", response_model=APIResponse[ReportOut])
 def get_report(report_id: UUID, current_user: AuthUser, db: Session = Depends(get_db)) -> APIResponse[ReportOut]:
-    if current_user.role == UserRole.TEACHER:
-        raise _forbidden()
     report = _load_report(db, report_id)
     if not report:
         raise _not_found()
@@ -359,7 +336,7 @@ def patch_report(
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[ReportOut]:
-    if current_user.role in (UserRole.TEACHER, UserRole.GOVERNMENT):
+    if current_user.role in (UserRole.GOVERNMENT, UserRole.PARTNER):
         raise _forbidden()
 
     report = db.get(Report, report_id)

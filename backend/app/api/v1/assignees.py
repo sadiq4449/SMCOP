@@ -36,10 +36,10 @@ def list_school_assignees(
     current_user: AuthUser,
     db: Session = Depends(get_db),
     school_id: UUID = Query(..., description="School UUID"),
-    purpose: AssigneePurpose = Query(..., description="task = principal/teacher; issue = principal/DEO/super admin"),
+    purpose: AssigneePurpose = Query(..., description="task = IE; issue = IE/Government/Super Admin"),
 ) -> APIResponse[AssigneeOptionsData]:
-    """Super Admin and DEO: human-friendly assignee list for tasks/issues at a school."""
-    if current_user.role not in (UserRole.SUPER_ADMIN, UserRole.DEO):
+    """Assignee pickers for tasks/issues at a school."""
+    if current_user.role not in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
         raise _forbidden()
     if not user_can_access_school(db, current_user, school_id):
         raise _forbidden()

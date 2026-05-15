@@ -48,7 +48,7 @@ def _task_out(t: WorkTask) -> TaskOut:
 
 def tasks_select_scoped(user: User):
     stmt = select(WorkTask)
-    if user.role in (UserRole.PRINCIPAL, UserRole.TEACHER, UserRole.ENUMERATOR):
+    if user.role == UserRole.IE:
         stmt = stmt.where(WorkTask.assignee_user_id == user.id)
         filters = school_scope_filters(user)
         if filters:
@@ -61,7 +61,7 @@ def tasks_select_scoped(user: User):
 
 
 def can_create_task(user: User) -> bool:
-    return user.role in (UserRole.SUPER_ADMIN, UserRole.DEO)
+    return user.role in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT)
 
 
 @router.post("", response_model=APIResponse[TaskOut])
@@ -156,7 +156,7 @@ def patch_task(
         if current_user.role == UserRole.SUPER_ADMIN:
             if not user_can_access_school(db, current_user, t.school_id):
                 raise _forbidden()
-        elif current_user.role == UserRole.DEO:
+        elif current_user.role == UserRole.GOVERNMENT:
             if not user_can_access_school(db, current_user, t.school_id):
                 raise _forbidden()
             if t.created_by_user_id != current_user.id:
@@ -172,11 +172,7 @@ def patch_task(
         t.due_date = data["due_date"]
 
     if "is_completed" in data and data["is_completed"] is not None:
-        can_complete = (
-            current_user.id == t.assignee_user_id
-            or current_user.role == UserRole.SUPER_ADMIN
-            or (current_user.role == UserRole.DEO and user_can_access_school(db, current_user, t.school_id))
-        )
+        can_complete = current_user.id == t.assignee_user_id or current_user.role == UserRole.SUPER_ADMIN
         if not can_complete:
             raise _forbidden()
         t.is_completed = bool(data["is_completed"])

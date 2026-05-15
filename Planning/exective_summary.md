@@ -1,0 +1,13 @@
+The School Monitoring & Classroom Observation Portal (SMCOP) is a centralized digital platform designed to streamline school monitoring activities across PPP-adopted schools in Sindh. Under the Public–Private Partnership (PPP) framework, multiple partner organizations are responsible for managing and improving government schools, while Independent Evaluators (IE) conduct quarterly monitoring visits to assess performance, compliance, classroom quality, and operational readiness.
+
+Currently, this process is fragmented, paper-based, and inconsistent across organizations. SMCOP solves this problem by providing a unified, role-based, fully digital monitoring ecosystem that standardizes KPI assessment, classroom observations, school profiling, report generation, historical visit tracking, and evidence documentation.
+
+The portal introduces a transparent and data-driven monitoring workflow, enabling PPP Node (Govt), Independent Evaluators, and Partner Organizations to work collaboratively under well-defined access controls. While the Super Admin maintains full system authority, Government and Partner Organizations receive only the permissions necessary for oversight and review—ensuring data integrity and preventing unauthorized modifications.
+
+SMCOP supports seven standardized KPIs, integrated classroom observation rubrics, attendance verification, infrastructure checks, compliance tracking, and digital evidence collection. Each school’s performance is evaluated quarterly, with automated visual dashboards, scoring summaries, and trend analytics. The system securely stores all historical data, enabling long-term evaluation of partner performance and school improvement.
+
+The portal also enhances accountability and governance by providing real-time dashboards, role-based reporting, and automated alerts, ensuring full visibility for PPP Node without compromising the independence of the evaluation process.
+
+Built with a modern, scalable architecture (React Frontend, Node.js API, PostgreSQL DB), SMCOP is designed to support thousands of schools, multi-organization access, offline visit notes, and mobile-first observation workflows. The platform provides a future-proof foundation for province-wide monitoring operations and can be expanded into full EMIS or Quality Assurance Systems in later phases.
+
+In essence, SMCOP transforms the entire monitoring function—from school visits to final evaluation reports—into a standardized, transparent, efficient, and digitally traceable process, strengthening the PPP education ecosystem and supporting data-driven decision-making at all levels.

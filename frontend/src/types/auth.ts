@@ -1,10 +1,4 @@
-export type UserRole =
-  | 'super_admin'
-  | 'government'
-  | 'deo'
-  | 'enumerator'
-  | 'principal'
-  | 'teacher'
+export type UserRole = 'super_admin' | 'government' | 'ie' | 'partner'
 
 export interface UserProfile {
   id: string

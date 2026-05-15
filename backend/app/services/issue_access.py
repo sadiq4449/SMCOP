@@ -1,4 +1,4 @@
-"""Who may create, list, or mutate issues (Iteration 9)."""
+"""Who may create, list, or mutate issues."""
 
 from __future__ import annotations
 
@@ -17,9 +17,8 @@ def can_raise_issue(user: User) -> bool:
     return user.role in (
         UserRole.SUPER_ADMIN,
         UserRole.GOVERNMENT,
-        UserRole.DEO,
-        UserRole.ENUMERATOR,
-        UserRole.PRINCIPAL,
+        UserRole.IE,
+        UserRole.PARTNER,
     )
 
 
@@ -36,16 +35,20 @@ def issues_select_scoped(user: User):
 
 
 def can_assign_or_admin_issue(user: User, db: Session, issue: Issue) -> bool:
-    """DEO (district) and Super Admin may assign and set arbitrary status."""
+    """Super Admin and PPP Node may assign and set arbitrary status."""
     if user.role == UserRole.SUPER_ADMIN:
         return user_can_access_school(db, user, issue.school_id)
-    if user.role == UserRole.DEO:
+    if user.role == UserRole.GOVERNMENT:
         return user_can_access_school(db, user, issue.school_id)
     return False
 
 
-def can_principal_resolve(db: Session, user: User, issue: Issue) -> bool:
-    if user.role != UserRole.PRINCIPAL:
+def can_partner_comment(user: User) -> bool:
+    return user.role == UserRole.PARTNER
+
+
+def can_ie_resolve_issue(db: Session, user: User, issue: Issue) -> bool:
+    if user.role != UserRole.IE:
         return False
     if not user_can_access_school(db, user, issue.school_id):
         return False
@@ -56,8 +59,8 @@ def can_principal_resolve(db: Session, user: User, issue: Issue) -> bool:
     return False
 
 
-def can_enumerator_update_status(db: Session, user: User, issue: Issue) -> bool:
-    if user.role != UserRole.ENUMERATOR:
+def can_ie_update_assigned_issue(db: Session, user: User, issue: Issue) -> bool:
+    if user.role != UserRole.IE:
         return False
     if not user_can_access_school(db, user, issue.school_id):
         return False

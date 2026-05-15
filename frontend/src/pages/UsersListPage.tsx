@@ -10,14 +10,7 @@ import type { UserRole } from '../types/auth'
 import type { District, PartnerOrg } from '../types/school'
 import type { PaginatedUsers, UserAdminRow } from '../types/user'
 
-const ROLE_OPTIONS: UserRole[] = [
-  'super_admin',
-  'government',
-  'deo',
-  'enumerator',
-  'principal',
-  'teacher',
-]
+const ROLE_OPTIONS: UserRole[] = ['super_admin', 'government', 'ie', 'partner']
 
 export function UsersListPage() {
   const { user } = useAuth()
@@ -234,10 +227,8 @@ export function UsersListPage() {
                   <td className="px-4 py-3 text-text-secondary">{roleLabels[u.role]}</td>
                   <td className="max-w-[220px] px-4 py-3 text-xs text-text-muted">
                     {[
-                      u.role === 'deo' ? (u.district_id ? 'District assigned' : 'No district') : null,
-                      ['enumerator', 'principal', 'teacher'].includes(u.role)
-                        ? `${u.assigned_schools.length} school(s)`
-                        : null,
+                      u.role === 'government' ? (u.district_id ? 'District assigned' : 'PPP / national') : null,
+                      u.role === 'ie' ? `${u.assigned_schools.length} IE school(s)` : null,
                       u.partner_org_id ? 'Partner org' : null,
                     ]
                       .filter(Boolean)

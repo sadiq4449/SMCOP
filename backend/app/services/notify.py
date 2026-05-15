@@ -14,7 +14,6 @@ from app.models.report import ReportStatus
 from app.models.school import School
 from app.models.user import User, UserRole, UserStatus
 from app.services.mailer import send_email_best_effort
-from app.services.school_access import school_district_id
 from app.services.webhook_dispatch import schedule_webhook_dispatch
 
 logger = logging.getLogger(__name__)
@@ -55,29 +54,27 @@ def _users_super_admins(db: Session) -> list[User]:
     )
 
 
-def _users_deo_for_district(db: Session, district_id: UUID) -> list[User]:
+def _government_users(db: Session) -> list[User]:
     return list(
         db.scalars(
-            select(User).where(
-                User.role == UserRole.DEO,
-                User.status == UserStatus.ACTIVE,
-                User.district_id == district_id,
-            ),
-        ).all()
+            select(User).where(User.role == UserRole.GOVERNMENT, User.status == UserStatus.ACTIVE),
+        ).all(),
     )
 
 
-def _principals_for_school(db: Session, school_id: UUID) -> list[User]:
-    sid = str(school_id)
-    principals = db.scalars(
-        select(User).where(User.role == UserRole.PRINCIPAL, User.status == UserStatus.ACTIVE),
-    ).all()
-    out: list[User] = []
-    for u in principals:
-        raw = u.assigned_schools if isinstance(u.assigned_schools, list) else []
-        if sid in [str(x) for x in raw]:
-            out.append(u)
-    return out
+def _partner_users_for_school(db: Session, school_id: UUID) -> list[User]:
+    sch = db.get(School, school_id)
+    if sch is None or sch.partner_org_id is None:
+        return []
+    return list(
+        db.scalars(
+            select(User).where(
+                User.role == UserRole.PARTNER,
+                User.partner_org_id == sch.partner_org_id,
+                User.status == UserStatus.ACTIVE,
+            ),
+        ).all(),
+    )
 
 
 def notify_visit_finalized(visit_id: str, school_id: str) -> None:
@@ -90,10 +87,8 @@ def notify_visit_finalized(visit_id: str, school_id: str) -> None:
         school_name = school.name if school else sid.hex[:8]
         recipients: list[User] = []
         recipients.extend(_users_super_admins(db))
-        did = school_district_id(db, sid)
-        if did:
-            recipients.extend(_users_deo_for_district(db, did))
-        recipients.extend(_principals_for_school(db, sid))
+        recipients.extend(_government_users(db))
+        recipients.extend(_partner_users_for_school(db, sid))
         seen: set[UUID] = set()
         title = "Visit submitted"
         msg = f"Monitoring visit for «{school_name}» was finalized (visit {str(vid)[:8]}…)."
@@ -119,9 +114,7 @@ def notify_report_submitted(report_id: str) -> None:
         school = db.get(School, report.school_id)
         school_name = school.name if school else str(report.school_id)
         recipients: list[User] = _users_super_admins(db)
-        did = school_district_id(db, report.school_id)
-        if did:
-            recipients.extend(_users_deo_for_district(db, did))
+        recipients.extend(_government_users(db))
         title = "Report pending approval"
         msg = f"Report for «{school_name}» ({report.quarter}) was submitted and awaits review."
         seen: set[UUID] = set()
@@ -160,7 +153,7 @@ def notify_report_approved(report_id: str) -> None:
         recipients: list[User] = []
         if creator and creator.status == UserStatus.ACTIVE:
             recipients.append(creator)
-        recipients.extend(_principals_for_school(db, report.school_id))
+        recipients.extend(_partner_users_for_school(db, report.school_id))
         seen: set[UUID] = set()
         for u in recipients:
             if u.id in seen:

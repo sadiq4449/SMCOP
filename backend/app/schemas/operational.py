@@ -19,6 +19,7 @@ class IssueCreate(BaseModel):
 class IssuePatch(BaseModel):
     status: IssueStatusLiteral | None = None
     assigned_to_user_id: str | None = None
+    comment: str | None = Field(None, max_length=4000)
 
 
 class IssueOut(BaseModel):

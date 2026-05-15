@@ -22,7 +22,6 @@ from app.services.dashboard_service import (
     system_dashboard_payload,
 )
 from app.services.school_access import user_can_access_school
-from app.services.visit_access import school_in_district
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
@@ -55,9 +54,7 @@ def can_access_school_dashboard(db: Session, user: User, school_id: UUID) -> boo
         return False
     if user.role in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
         return True
-    if user.role == UserRole.DEO:
-        return school_in_district(db, user.district_id, school_id)
-    if user.role in (UserRole.ENUMERATOR, UserRole.PRINCIPAL, UserRole.TEACHER):
+    if user.role in (UserRole.IE, UserRole.PARTNER):
         return user_can_access_school(db, user, school_id)
     return False
 
@@ -113,20 +110,14 @@ def dashboard_district(
     school_skip: int = Query(0, ge=0),
     school_limit: int = Query(30, ge=1, le=100),
 ) -> APIResponse[dict[str, Any]]:
-    if current_user.role == UserRole.DEO:
-        if current_user.district_id is None:
-            raise _forbidden()
-        resolved = current_user.district_id
-    elif current_user.role in (UserRole.GOVERNMENT, UserRole.SUPER_ADMIN):
-        if district_id is None:
-            raise _bad("district_id is required", "district_id")
-        resolved = district_id
-    else:
+    if current_user.role not in (UserRole.GOVERNMENT, UserRole.SUPER_ADMIN):
         raise _forbidden()
+    if district_id is None:
+        raise _bad("district_id is required", "district_id")
 
     payload = district_operational_payload(
         db,
-        district_id=resolved,
+        district_id=district_id,
         quarter=quarter,
         school_skip=school_skip,
         school_limit=school_limit,
@@ -148,10 +139,8 @@ def dashboard_school(
     if current_user.role not in (
         UserRole.SUPER_ADMIN,
         UserRole.GOVERNMENT,
-        UserRole.DEO,
-        UserRole.ENUMERATOR,
-        UserRole.PRINCIPAL,
-        UserRole.TEACHER,
+        UserRole.IE,
+        UserRole.PARTNER,
     ):
         raise _forbidden()
 

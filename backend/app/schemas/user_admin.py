@@ -37,7 +37,7 @@ class UserCreate(BaseModel):
 
 
 class AssignedSchoolsPayload(BaseModel):
-    """Replace (Super Admin) or district-slice merge (DEO) — see ``PATCH /users/{id}/assigned-schools``."""
+    """Replace IE assigned-school list — Super Admin only."""
 
     assigned_schools: list[str] = Field(default_factory=list)
 

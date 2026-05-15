@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -16,9 +18,9 @@ from app.schemas.operational import IssueCreate, IssueOut, IssuePatch, Paginated
 from app.services.audit import log_activity
 from app.services.issue_access import (
     can_assign_or_admin_issue,
-    can_enumerator_update_status,
+    can_ie_resolve_issue,
+    can_ie_update_assigned_issue,
     can_list_issues_for_school,
-    can_principal_resolve,
     can_raise_issue,
     issues_select_scoped,
 )
@@ -139,8 +141,6 @@ def patch_issue(
         )
     if not user_can_access_school(db, current_user, issue.school_id):
         raise _forbidden()
-    if current_user.role == UserRole.GOVERNMENT:
-        raise _forbidden()
 
     data = payload.model_dump(exclude_unset=True)
     if not data:
@@ -148,6 +148,44 @@ def patch_issue(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"success": False, "message": "No fields to update", "errors": {"body": "empty"}},
         )
+
+    if "comment" in data:
+        raw_keys = set(payload.model_dump(exclude_unset=True).keys())
+        if raw_keys != {"comment"}:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": "Comment updates cannot be combined with assignee or status fields.",
+                    "errors": {"comment": "exclusive"},
+                },
+            )
+        raw_c = data.pop("comment")
+        text = str(raw_c).strip() if raw_c is not None else ""
+        if not text:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"success": False, "message": "comment must not be empty", "errors": {"comment": "invalid"}},
+            )
+        if current_user.role not in (UserRole.PARTNER, UserRole.GOVERNMENT):
+            raise _forbidden()
+        stamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
+        who = current_user.full_name
+        role_l = current_user.role.value
+        issue.details = issue.details + f"\n\n[{stamp} — {who} ({role_l})]\n{text}"
+        db.commit()
+        db.refresh(issue)
+        log_activity(
+            db,
+            action="issues.comment",
+            target=str(issue.id),
+            user_id=current_user.id,
+            metadata={"school_id": str(issue.school_id)},
+        )
+        return APIResponse(success=True, message="Comment added", data=_issue_out(issue))
+
+    if current_user.role == UserRole.GOVERNMENT:
+        raise _forbidden()
 
     old_status = issue.status.value
     old_assignee = issue.assigned_to_user_id
@@ -176,7 +214,7 @@ def patch_issue(
         if admin:
             issue.status = new_st
         else:
-            allowed = can_principal_resolve(db, current_user, issue) or can_enumerator_update_status(db, current_user, issue)
+            allowed = can_ie_resolve_issue(db, current_user, issue) or can_ie_update_assigned_issue(db, current_user, issue)
             if not allowed:
                 raise _forbidden()
             if new_st not in (IssueStatus.RESOLVED, IssueStatus.CLOSED):

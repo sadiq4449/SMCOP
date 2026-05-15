@@ -34,16 +34,7 @@ export async function updateUser(id: string, body: Record<string, unknown>): Pro
   return data.data
 }
 
-/** DEO: enumerator / principal / teacher accounts this district may assign schools to. */
-export async function listAssignmentCandidates(params?: { q?: string }): Promise<PaginatedUsers> {
-  const { data } = await apiClient.get<ApiResponse<PaginatedUsers>>('/users/assignment-candidates', {
-    params: { q: params?.q },
-  })
-  if (!data.success || !data.data) throw new Error(data.message)
-  return data.data
-}
-
-/** Super Admin replaces list; DEO merges in-district schools only (see backend). */
+/** Super Admin replaces Independent Evaluator school assignments (PATCH ``/users/{id}/assigned-schools``). */
 export async function patchUserAssignedSchools(
   id: string,
   assignedSchools: string[],

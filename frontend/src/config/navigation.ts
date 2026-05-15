@@ -9,6 +9,7 @@ const sharedDashboard: NavItem = { label: 'Dashboard', path: '/dashboard' }
 
 const opsNav: NavItem = { label: 'Issues & tasks', path: '/dashboard/issues' }
 
+/** Sidebar scoped to the four SMCOP persona roles (see Planning/problem statement). */
 const roleNavigation: Record<UserRole, NavItem[]> = {
   super_admin: [
     sharedDashboard,
@@ -26,57 +27,32 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Districts', path: '/dashboard/districts' },
-    { label: 'School Reports', path: '/dashboard/school-reports' },
-    { label: 'Timetable', path: '/dashboard/timetable' },
-    { label: 'Comparisons', path: '/dashboard/comparisons' },
-  ],
-  deo: [
-    sharedDashboard,
-    opsNav,
-    { label: 'Schools', path: '/dashboard/schools' },
-    { label: 'Field assignments', path: '/dashboard/field-assignments' },
-    { label: 'Districts', path: '/dashboard/districts' },
-    { label: 'Approvals', path: '/dashboard/approvals' },
-    { label: 'Comparisons', path: '/dashboard/comparisons' },
-    { label: 'Field Visits', path: '/dashboard/visits' },
-    { label: 'Observations', path: '/dashboard/observations' },
-  ],
-  enumerator: [
-    sharedDashboard,
-    opsNav,
-    { label: 'Schools', path: '/dashboard/schools' },
-    { label: 'Districts', path: '/dashboard/districts' },
     { label: 'Reports', path: '/dashboard/reports' },
-    { label: 'Assigned Schools', path: '/dashboard/assigned-schools' },
-    { label: 'Monitoring Visits', path: '/dashboard/monitoring' },
-    { label: 'Observations', path: '/dashboard/observations' },
   ],
-  principal: [
+  ie: [
     sharedDashboard,
     opsNav,
     { label: 'Schools', path: '/dashboard/schools' },
+    { label: 'Districts', path: '/dashboard/districts' },
     { label: 'Assigned schools', path: '/dashboard/assigned-schools' },
+    { label: 'Monitoring visits', path: '/dashboard/monitoring' },
     { label: 'Observations', path: '/dashboard/observations' },
-    { label: 'Attendance', path: '/dashboard/attendance' },
-    { label: 'Timetable', path: '/dashboard/timetable' },
-    { label: 'School Reports', path: '/dashboard/reports' },
+    { label: 'Reports', path: '/dashboard/reports' },
   ],
-  teacher: [
+  partner: [
     sharedDashboard,
     opsNav,
-    { label: 'My Attendance', path: '/dashboard/my-attendance' },
-    { label: 'Class Attendance', path: '/dashboard/class-attendance' },
-    { label: 'Timetable', path: '/dashboard/timetable' },
+    { label: 'Schools', path: '/dashboard/schools' },
+    { label: 'Observations', path: '/dashboard/observations' },
+    { label: 'Reports', path: '/dashboard/reports' },
   ],
 }
 
 export const roleLabels: Record<UserRole, string> = {
   super_admin: 'Super Admin',
-  government: 'Government',
-  deo: 'District Education Officer',
-  enumerator: 'Enumerator',
-  principal: 'Principal',
-  teacher: 'Teacher',
+  government: 'PPP Node (Government)',
+  ie: 'Independent Evaluator',
+  partner: 'Partner organization',
 }
 
 export function getNavigationForRole(role: UserRole): NavItem[] {

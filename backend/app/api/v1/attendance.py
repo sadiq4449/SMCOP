@@ -161,7 +161,7 @@ def submit_teacher_attendance(
             },
         )
 
-    is_teacher_self = current_user.role == UserRole.TEACHER
+    is_teacher_self = False
     is_principal_batch = can_submit_teacher_attendance_batch(db, current_user, school_uuid)
 
     if is_teacher_self:
@@ -197,7 +197,7 @@ def submit_teacher_attendance(
     out_rows: list[TeacherAttendance] = []
     now = datetime.now(timezone.utc)
 
-    auto_approve = current_user.role in (UserRole.PRINCIPAL, UserRole.SUPER_ADMIN)
+    auto_approve = current_user.role == UserRole.SUPER_ADMIN
 
     for line in payload.teachers:
         if is_teacher_self:
@@ -532,7 +532,7 @@ def export_attendance_csv(
             },
         )
 
-    if current_user.role == UserRole.PRINCIPAL and not can_review_teacher_attendance(db, current_user, school_id):
+    if current_user.role != UserRole.SUPER_ADMIN or not can_review_teacher_attendance(db, current_user, school_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
@@ -629,7 +629,7 @@ def export_attendance_xlsx(
             },
         )
 
-    if current_user.role == UserRole.PRINCIPAL and not can_review_teacher_attendance(db, current_user, school_id):
+    if current_user.role != UserRole.SUPER_ADMIN or not can_review_teacher_attendance(db, current_user, school_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={

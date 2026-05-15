@@ -19,7 +19,7 @@ export function ObservationsPage() {
   const [savingId, setSavingId] = useState<string | null>(null)
 
   const assigned = useMemo(() => user?.assigned_schools ?? [], [user?.assigned_schools])
-  const isDeo = user?.role === 'deo'
+  const canReviewObservations = user?.role === 'super_admin' || user?.role === 'government'
 
   const load = async () => {
     setLoading(true)
@@ -155,12 +155,12 @@ export function ObservationsPage() {
               <p className="mt-2 text-xs text-text-secondary">
                 Engagement {o.score_engagement} · Pedagogy {o.score_pedagogy} · Environment {o.score_environment}
               </p>
-              {o.reviewer_comments && !isDeo ? (
-                <p className="mt-2 text-xs text-secondary">DEO notes: {o.reviewer_comments}</p>
+              {o.reviewer_comments ? (
+                <p className="mt-2 text-xs text-secondary">PPP review notes: {o.reviewer_comments}</p>
               ) : null}
-              {isDeo && (o.visit_status ?? 'draft') === 'finalized' ? (
+              {canReviewObservations && (o.visit_status ?? 'draft') === 'finalized' ? (
                 <div className="mt-3 space-y-2 rounded-lg border border-muted-surface bg-surface px-3 py-2">
-                  <label className="block text-xs font-medium text-text-secondary">District review (DEO)</label>
+                  <label className="block text-xs font-medium text-text-secondary">PPP oversight review</label>
                   <textarea
                     value={reviewDrafts[o.id] ?? o.reviewer_comments ?? ''}
                     onChange={(e) => setReviewDrafts((prev) => ({ ...prev, [o.id]: e.target.value }))}
@@ -178,8 +178,10 @@ export function ObservationsPage() {
                   </button>
                 </div>
               ) : null}
-              {isDeo && (o.visit_status ?? 'draft') !== 'finalized' ? (
-                <p className="mt-2 text-xs text-text-muted">District review notes can be saved after this visit is finalized.</p>
+              {canReviewObservations && (o.visit_status ?? 'draft') !== 'finalized' ? (
+                <p className="mt-2 text-xs text-text-muted">
+                  PPP review notes can be saved after this visit is finalized.
+                </p>
               ) : null}
               <ul className="mt-3 space-y-1 text-xs">
                 {o.documents.map((d) => (

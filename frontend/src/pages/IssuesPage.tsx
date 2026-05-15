@@ -21,16 +21,16 @@ import {
 import type { SchoolSummary } from '../types/school'
 import type { UserRole } from '../types/auth'
 
-function canCreateIssue(role: UserRole) {
-  return role !== 'teacher'
+function canCreateIssue(_role: UserRole) {
+  return true
 }
 
 function canAssignIssue(role: UserRole) {
-  return role === 'super_admin' || role === 'deo'
+  return role === 'super_admin' || role === 'government'
 }
 
 function canCreateTask(role: UserRole) {
-  return role === 'super_admin' || role === 'deo'
+  return role === 'super_admin' || role === 'government'
 }
 
 function SchoolQuickPicker({
@@ -141,7 +141,7 @@ export function IssuesPage() {
     setErr(null)
     try {
       const q: { school_id?: string } = {}
-      if (schoolId && (user.role === 'principal' || user.role === 'enumerator')) {
+      if (schoolId && (user.role === 'ie' || user.role === 'partner')) {
         q.school_id = schoolId
       }
       const [i, t, a] = await Promise.all([
@@ -431,7 +431,7 @@ export function IssuesPage() {
                         </button>
                       </div>
                     ) : null}
-                    {user.role !== 'government' && user.role !== 'teacher' ? (
+                    {user.role !== 'government' ? (
                       <div className="flex flex-wrap gap-1">
                         <button
                           type="button"
@@ -473,7 +473,7 @@ export function IssuesPage() {
                 onChange={(ev) => setTaskAssigneeId(ev.target.value)}
                 required
               >
-                <option value="">Select principal or teacher…</option>
+                <option value="">Select assignee…</option>
                 {taskAssignees.map((o) => (
                   <option key={o.id} value={o.id}>
                     {assigneeOptionLabel(o)}

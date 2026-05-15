@@ -7,7 +7,7 @@ import { getDistricts, getSchools, getTalukas, getUnionCouncils } from '../servi
 import type { UserRole } from '../types/auth'
 import type { District, PaginatedSchools, SchoolSummary, Taluka, UnionCouncil } from '../types/school'
 
-const schoolRoles: UserRole[] = ['super_admin', 'government', 'deo', 'enumerator', 'principal']
+const schoolRoles: UserRole[] = ['super_admin', 'government', 'ie', 'partner']
 
 export function SchoolsListPage() {
   const { user } = useAuth()

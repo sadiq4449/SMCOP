@@ -65,7 +65,7 @@ export function VisitFormPage() {
   const canEdit = useMemo(() => {
     if (!user || !visit) return isNew
     if (user.role === 'super_admin') return true
-    if (user.role !== 'enumerator') return false
+    if (user.role !== 'ie') return false
     return visit.status === 'draft'
   }, [user, visit, isNew])
 
@@ -375,7 +375,7 @@ export function VisitFormPage() {
       {isNew ? (
         <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
           <h2 className="text-lg font-semibold text-text-primary">Start visit</h2>
-          {user.role === 'enumerator' && !schoolIdParam ? (
+          {user.role === 'ie' && !schoolIdParam ? (
             <p className="rounded-lg border border-amber-200/90 bg-amber-50/90 px-3 py-2.5 text-sm text-amber-950">
               Open{' '}
               <Link to="/dashboard/assigned-schools" className="font-semibold text-secondary underline-offset-2 hover:underline">
@@ -401,7 +401,7 @@ export function VisitFormPage() {
           </label>
           <button
             type="button"
-            disabled={creating || !schoolIdParam || user.role !== 'enumerator'}
+            disabled={creating || !schoolIdParam || user.role !== 'ie'}
             onClick={() => void handleCreate()}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
           >

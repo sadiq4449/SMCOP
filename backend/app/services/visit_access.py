@@ -1,4 +1,4 @@
-"""Visit row visibility and mutation rules (Iteration 4)."""
+"""Visit row visibility and mutation rules."""
 
 from __future__ import annotations
 
@@ -7,10 +7,10 @@ from uuid import UUID
 from sqlalchemy import false, select
 from sqlalchemy.orm import Session
 
-from app.models.geography import Taluka, UnionCouncil
 from app.models.monitoring import Visit, VisitFormStatus
 from app.models.school import School
 from app.models.user import User, UserRole
+from app.models.geography import Taluka, UnionCouncil
 from app.services.school_access import parse_assigned_school_ids, user_can_access_school
 
 
@@ -31,28 +31,20 @@ def visit_select_filtered(user: User, db: Session):
     if user.role in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
         return select(Visit)
 
-    if user.role == UserRole.ENUMERATOR:
+    if user.role == UserRole.IE:
         ids = parse_assigned_school_ids(user.assigned_schools)
         if not ids:
             return select(Visit).where(false())
         return select(Visit).where(Visit.visited_by_id == user.id, Visit.school_id.in_(ids))
 
-    if user.role == UserRole.DEO:
-        if user.district_id is None:
+    if user.role == UserRole.PARTNER:
+        if user.partner_org_id is None:
             return select(Visit).where(false())
         return (
             select(Visit)
             .join(School, Visit.school_id == School.id)
-            .join(UnionCouncil, School.uc_id == UnionCouncil.id)
-            .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
-            .where(Taluka.district_id == user.district_id)
+            .where(School.partner_org_id == user.partner_org_id)
         )
-
-    if user.role in (UserRole.PRINCIPAL, UserRole.TEACHER):
-        ids = parse_assigned_school_ids(user.assigned_schools)
-        if not ids:
-            return select(Visit).where(false())
-        return select(Visit).where(Visit.school_id.in_(ids))
 
     return select(Visit).where(false())
 
@@ -60,17 +52,16 @@ def visit_select_filtered(user: User, db: Session):
 def can_read_visit(db: Session, user: User, visit: Visit) -> bool:
     if user.role in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT):
         return True
-    if user.role == UserRole.ENUMERATOR:
+    if user.role == UserRole.IE:
         return visit.visited_by_id == user.id and user_can_access_school(db, user, visit.school_id)
-    if user.role == UserRole.DEO:
-        return school_in_district(db, user.district_id, visit.school_id)
-    if user.role in (UserRole.PRINCIPAL, UserRole.TEACHER):
-        return user_can_access_school(db, user, visit.school_id)
+    if user.role == UserRole.PARTNER:
+        sch = db.get(School, visit.school_id)
+        return bool(sch and sch.partner_org_id == user.partner_org_id)
     return False
 
 
 def can_create_visit_for_school(db: Session, user: User, school_id: UUID) -> bool:
-    return user.role == UserRole.ENUMERATOR and user_can_access_school(db, user, school_id)
+    return user.role == UserRole.IE and user_can_access_school(db, user, school_id)
 
 
 def can_mutate_visit(db: Session, user: User, visit: Visit) -> bool:
@@ -78,6 +69,6 @@ def can_mutate_visit(db: Session, user: User, visit: Visit) -> bool:
         return True
     if visit.status == VisitFormStatus.FINALIZED:
         return False
-    if user.role != UserRole.ENUMERATOR:
+    if user.role != UserRole.IE:
         return False
     return visit.visited_by_id == user.id and user_can_access_school(db, user, visit.school_id)

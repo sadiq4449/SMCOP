@@ -169,12 +169,12 @@ def create_visit(
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[VisitSummary]:
-    if current_user.role != UserRole.ENUMERATOR:
+    if current_user.role != UserRole.IE:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "success": False,
-                "message": "Only enumerators can create monitoring visits",
+                "message": "Only Independent Evaluators can create monitoring visits",
                 "errors": {"role": "forbidden"},
             },
         )

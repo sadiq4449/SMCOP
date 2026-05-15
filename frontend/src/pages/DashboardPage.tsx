@@ -87,11 +87,7 @@ export function DashboardPage() {
         } else {
           setDistrictDetail(null)
         }
-      } else if (user.role === 'deo') {
-        const dist = await getDashboardDistrict({ quarter: q })
-        setMain(null)
-        setDistrictDetail(dist)
-      } else if (user.role === 'principal' || user.role === 'teacher' || user.role === 'enumerator') {
+      } else if (user.role === 'ie') {
         if (!primarySchoolId) {
           setMain(null)
           setDistrictDetail(null)
@@ -216,7 +212,7 @@ export function DashboardPage() {
       {
         key: 'draft',
         label: 'Draft pressure',
-        hint: 'Pending enumerator visits',
+        hint: 'Pending IE visits',
         ringProgress: clampPct(pDraft * 8),
         displayValue: pDraft,
       },
@@ -350,9 +346,7 @@ export function DashboardPage() {
     : 1
 
   const schoolDash =
-    main &&
-    typeof main.school_id === 'string' &&
-    (user.role === 'principal' || user.role === 'teacher' || user.role === 'enumerator')
+    main && typeof main.school_id === 'string' && user.role === 'ie'
 
   const execSummary =
     totals != null
@@ -429,7 +423,7 @@ export function DashboardPage() {
       ) : null}
 
       {!loading &&
-      (user.role === 'principal' || user.role === 'teacher' || user.role === 'enumerator') &&
+      (user.role === 'ie') &&
       !primarySchoolId ? (
         <div className="animate-premium-in rounded-xl border border-amber-200/90 bg-amber-50/90 px-5 py-4 text-sm text-amber-950">
           No assigned school on your account yet. Ask a Super Admin to assign{' '}
@@ -857,27 +851,10 @@ export function DashboardPage() {
             >
               School profile
             </Link>
-            {(user.role === 'principal' || user.role === 'teacher') && (
-              <Link
-                to="/dashboard/attendance"
-                className="rounded-xl border border-slate-200/90 bg-white px-5 py-2.5 text-[13px] font-medium text-text-primary shadow-sm transition-colors hover:border-slate-300 hover:bg-slate-50"
-              >
-                Attendance
-              </Link>
-            )}
           </div>
         </section>
       ) : null}
 
-      {!loading &&
-      user.role !== 'super_admin' &&
-      user.role !== 'government' &&
-      user.role !== 'deo' &&
-      user.role !== 'principal' &&
-      user.role !== 'teacher' &&
-      user.role !== 'enumerator' ? (
-        <p className="pl-1 text-sm text-text-muted">No dashboard module for this role.</p>
-      ) : null}
     </div>
   )
 }

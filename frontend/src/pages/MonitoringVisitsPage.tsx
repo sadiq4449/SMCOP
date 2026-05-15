@@ -7,7 +7,7 @@ import { listVisits } from '../services/visitsApi'
 import type { VisitSummary } from '../types/visit'
 import { normalizeQuarterInput } from '../utils/quarter'
 
-const monitorRoles = ['enumerator', 'deo', 'government', 'super_admin', 'principal']
+const monitorRoles = ['ie', 'government', 'super_admin', 'partner']
 
 export function MonitoringVisitsPage() {
   const { user } = useAuth()
@@ -45,10 +45,10 @@ export function MonitoringVisitsPage() {
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Monitoring</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Quarterly visits</h1>
           <p className="mt-1 text-sm text-text-muted">
-            Enumerators capture KPI scores and evidence; district officers review visits in their geography.
+            Independent Evaluators capture KPI scores and evidence; PPP Node and partners review visits in their scope.
           </p>
         </div>
-        {user.role === 'enumerator' ? (
+        {user.role === 'ie' ? (
           <Link
             to="/dashboard/assigned-schools"
             className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary"
