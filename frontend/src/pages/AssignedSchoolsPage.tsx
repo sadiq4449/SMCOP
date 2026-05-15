@@ -33,12 +33,20 @@ export function AssignedSchoolsPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">School access</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Assigned schools</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Schools your IE account may monitor — start a quarterly visit from here.
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">School access</p>
+          <h1 className="mt-1 text-2xl font-semibold text-text-primary">Assigned schools</h1>
+          <p className="mt-1 text-sm text-text-muted">
+            Schools your IE account may monitor — start a quarterly visit from here.
+          </p>
+        </div>
+        <Link
+          to="/dashboard/visit-calendar"
+          className="rounded-lg border border-muted-surface px-4 py-2 text-sm font-semibold text-text-primary hover:bg-muted-surface/40"
+        >
+          Visit calendar
+        </Link>
       </header>
 
       {error ? (

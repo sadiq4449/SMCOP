@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -52,8 +52,12 @@ class DocumentSummary(BaseModel):
 class VisitSummary(BaseModel):
     id: str
     school_id: str
+    school_name: str | None = None
     quarter: str
     visit_date: date | None
+    scheduled_date: date | None = None
+    scheduled_time_start: time | None = None
+    scheduled_time_end: time | None = None
     status: str
     aggregate_score: float | None
     visited_by_id: str
@@ -66,6 +70,9 @@ class VisitDetail(BaseModel):
     school_id: str
     quarter: str
     visit_date: date | None
+    scheduled_date: date | None = None
+    scheduled_time_start: time | None = None
+    scheduled_time_end: time | None = None
     status: str
     remarks: str | None
     aggregate_score: float | None
@@ -94,10 +101,16 @@ class VisitCreate(BaseModel):
     school_id: str
     quarter: str = Field(min_length=3, max_length=20)
     visit_date: date | None = None
+    scheduled_date: date | None = None
+    scheduled_time_start: time | None = None
+    scheduled_time_end: time | None = None
 
 
 class VisitPatch(BaseModel):
     visit_date: date | None = None
+    scheduled_date: date | None = None
+    scheduled_time_start: time | None = None
+    scheduled_time_end: time | None = None
     remarks: str | None = None
     gps_latitude: float | None = None
     gps_longitude: float | None = None

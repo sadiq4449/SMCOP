@@ -27,6 +27,12 @@ const INFRA_PRESETS = [
   'Classroom furniture & seating',
 ]
 
+function timeApiValue(raw: string): string | null {
+  const t = raw.trim()
+  if (!t) return null
+  return t.length === 5 ? `${t}:00` : t
+}
+
 export function VisitFormPage() {
   const { visitId } = useParams<{ visitId: string }>()
   const [searchParams] = useSearchParams()
@@ -39,6 +45,9 @@ export function VisitFormPage() {
   const [scores, setScores] = useState<Record<string, number>>({})
   const [infraLines, setInfraLines] = useState<Array<{ item_name: string; status: string; remarks: string }>>([])
   const [visitDate, setVisitDate] = useState('')
+  const [scheduledDate, setScheduledDate] = useState('')
+  const [scheduledTimeStart, setScheduledTimeStart] = useState('')
+  const [scheduledTimeEnd, setScheduledTimeEnd] = useState('')
   const [remarks, setRemarks] = useState('')
   const [gpsLat, setGpsLat] = useState('')
   const [gpsLng, setGpsLng] = useState('')
@@ -102,6 +111,13 @@ export function VisitFormPage() {
             )
           }
           setVisitDate(v.visit_date ?? '')
+          setScheduledDate(v.scheduled_date ?? '')
+          setScheduledTimeStart(
+            v.scheduled_time_start && v.scheduled_time_start.length >= 5 ? v.scheduled_time_start.slice(0, 5) : '',
+          )
+          setScheduledTimeEnd(
+            v.scheduled_time_end && v.scheduled_time_end.length >= 5 ? v.scheduled_time_end.slice(0, 5) : '',
+          )
           setRemarks(v.remarks ?? '')
           setGpsLat(v.gps_latitude != null ? String(v.gps_latitude) : '')
           setGpsLng(v.gps_longitude != null ? String(v.gps_longitude) : '')
@@ -162,6 +178,9 @@ export function VisitFormPage() {
         school_id: schoolIdParam,
         quarter: quarter.trim(),
         visit_date: visitDate || null,
+        scheduled_date: scheduledDate || null,
+        scheduled_time_start: timeApiValue(scheduledTimeStart),
+        scheduled_time_end: timeApiValue(scheduledTimeEnd),
       })
       navigate(`/dashboard/monitoring/${v.id}`)
     } catch (e) {
@@ -220,6 +239,9 @@ export function VisitFormPage() {
     try {
       const body: Record<string, unknown> = {
         visit_date: visitDate || null,
+        scheduled_date: scheduledDate || null,
+        scheduled_time_start: timeApiValue(scheduledTimeStart),
+        scheduled_time_end: timeApiValue(scheduledTimeEnd),
         remarks: remarks || null,
         gps_latitude: gpsLat ? Number.parseFloat(gpsLat) : null,
         gps_longitude: gpsLng ? Number.parseFloat(gpsLng) : null,
@@ -272,6 +294,9 @@ export function VisitFormPage() {
       const v = await patchVisit(visit.id, {
         status: 'finalized',
         visit_date: visitDate || null,
+        scheduled_date: scheduledDate || null,
+        scheduled_time_start: timeApiValue(scheduledTimeStart),
+        scheduled_time_end: timeApiValue(scheduledTimeEnd),
         remarks: remarks || null,
         gps_latitude: gpsLat ? Number.parseFloat(gpsLat) : null,
         gps_longitude: gpsLng ? Number.parseFloat(gpsLng) : null,
@@ -355,9 +380,14 @@ export function VisitFormPage() {
             Draft saves KPI scores, checklist, GPS, and evidence; finalize locks the record for auditors.
           </p>
         </div>
-        <Link to="/dashboard/monitoring" className="text-sm font-medium text-secondary hover:text-primary">
-          ← Back to list
-        </Link>
+        <div className="flex flex-col items-end gap-2 text-sm font-medium">
+          <Link to="/dashboard/visit-calendar" className="text-secondary hover:text-primary">
+            Monthly calendar
+          </Link>
+          <Link to="/dashboard/monitoring" className="text-secondary hover:text-primary">
+            ← Back to list
+          </Link>
+        </div>
       </header>
 
       {error || observationsError || teachersError ? (
@@ -396,9 +426,50 @@ export function VisitFormPage() {
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block font-medium text-text-secondary">Visit date</span>
-            <input type="date" value={visitDate} onChange={(e) => setVisitDate(e.target.value)} className="w-full rounded-lg border px-3 py-2" />
+            <span className="mb-1 block font-medium text-text-secondary">Planned inspection date</span>
+            <input
+              type="date"
+              value={scheduledDate}
+              onChange={(e) => setScheduledDate(e.target.value)}
+              disabled={user.role !== 'ie'}
+              className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+            />
           </label>
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-text-secondary">Window start (optional)</span>
+              <input
+                type="time"
+                value={scheduledTimeStart}
+                onChange={(e) => setScheduledTimeStart(e.target.value)}
+                disabled={user.role !== 'ie'}
+                className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-text-secondary">Window end (optional)</span>
+              <input
+                type="time"
+                value={scheduledTimeEnd}
+                onChange={(e) => setScheduledTimeEnd(e.target.value)}
+                disabled={user.role !== 'ie'}
+                className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+              />
+            </label>
+          </div>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-text-secondary">Actual visit date (required before finalize)</span>
+            <input
+              type="date"
+              value={visitDate}
+              onChange={(e) => setVisitDate(e.target.value)}
+              disabled={user.role !== 'ie'}
+              className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+            />
+          </label>
+          <p className="text-xs text-text-muted">
+            Planned date appears on the visit calendar for PPP Node; finalize still requires the actual visit date.
+          </p>
           <button
             type="button"
             disabled={creating || !schoolIdParam || user.role !== 'ie'}
@@ -425,7 +496,38 @@ export function VisitFormPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <label className="block text-sm md:col-span-2">
-                <span className="mb-1 block font-medium text-text-secondary">Visit date</span>
+                <span className="mb-1 block font-medium text-text-secondary">Planned inspection date</span>
+                <input
+                  type="date"
+                  disabled={!canEdit}
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+                />
+                <span className="mt-1 block text-xs text-text-muted">Shown on the monthly calendar; reschedule anytime while draft.</span>
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-text-secondary">Window start</span>
+                <input
+                  type="time"
+                  disabled={!canEdit}
+                  value={scheduledTimeStart}
+                  onChange={(e) => setScheduledTimeStart(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+                />
+              </label>
+              <label className="block text-sm">
+                <span className="mb-1 block font-medium text-text-secondary">Window end</span>
+                <input
+                  type="time"
+                  disabled={!canEdit}
+                  value={scheduledTimeEnd}
+                  onChange={(e) => setScheduledTimeEnd(e.target.value)}
+                  className="w-full rounded-lg border px-3 py-2 disabled:opacity-60"
+                />
+              </label>
+              <label className="block text-sm md:col-span-2">
+                <span className="mb-1 block font-medium text-text-secondary">Actual visit date (required before finalize)</span>
                 <input
                   type="date"
                   disabled={!canEdit}
@@ -435,7 +537,7 @@ export function VisitFormPage() {
                 />
               </label>
               <label className="block text-sm md:col-span-2">
-                <span className="mb-1 block font-medium text-text-secondary">Enumerator remarks</span>
+                <span className="mb-1 block font-medium text-text-secondary">Visit remarks</span>
                 <textarea
                   disabled={!canEdit}
                   value={remarks}
@@ -470,7 +572,7 @@ export function VisitFormPage() {
                 onClick={() => void saveMeta()}
                 className="rounded-lg border border-muted-surface px-4 py-2 text-sm font-semibold text-text-primary hover:bg-section"
               >
-                Save details & checklist
+                Save details, schedule & checklist
               </button>
             ) : null}
           </section>

@@ -48,14 +48,22 @@ export function MonitoringVisitsPage() {
             Independent Evaluators capture KPI scores and evidence; PPP Node and partners review visits in their scope.
           </p>
         </div>
-        {user.role === 'ie' ? (
+        <div className="flex flex-wrap items-center gap-2">
           <Link
-            to="/dashboard/assigned-schools"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary"
+            to="/dashboard/visit-calendar"
+            className="rounded-lg border border-muted-surface px-4 py-2 text-sm font-semibold text-text-primary hover:bg-muted-surface/40"
           >
-            Assigned schools
+            Visit calendar
           </Link>
-        ) : null}
+          {user.role === 'ie' ? (
+            <Link
+              to="/dashboard/assigned-schools"
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary"
+            >
+              Assigned schools
+            </Link>
+          ) : null}
+        </div>
       </header>
 
       <label className="block max-w-xs text-sm">
@@ -84,7 +92,8 @@ export function MonitoringVisitsPage() {
               <tr>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary">Quarter</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary">School</th>
-                <th className="px-4 py-3 text-left font-semibold text-text-secondary">Date</th>
+                <th className="px-4 py-3 text-left font-semibold text-text-secondary">Planned</th>
+                <th className="px-4 py-3 text-left font-semibold text-text-secondary">Actual date</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary">Score</th>
                 <th className="px-4 py-3 text-left font-semibold text-text-secondary">Status</th>
                 <th className="px-4 py-3 text-right font-semibold text-text-secondary">Actions</th>
@@ -122,7 +131,7 @@ export function MonitoringVisitsPage() {
               ))}
               {!loading && items.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-text-muted">
+                  <td colSpan={7} className="px-4 py-8 text-center text-text-muted">
                     No visits for this quarter filter.
                   </td>
                 </tr>

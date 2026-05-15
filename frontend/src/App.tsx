@@ -23,6 +23,7 @@ import { SchoolFormPage } from './pages/SchoolFormPage'
 import { SchoolsListPage } from './pages/SchoolsListPage'
 import { UserFormPage } from './pages/UserFormPage'
 import { UsersListPage } from './pages/UsersListPage'
+import { VisitCalendarPage } from './pages/VisitCalendarPage'
 import { VisitFormPage } from './pages/VisitFormPage'
 
 function App() {
@@ -59,6 +60,7 @@ function App() {
               <Route path="/dashboard/monitoring/new" element={<VisitFormPage />} />
               <Route path="/dashboard/monitoring/:visitId" element={<VisitFormPage />} />
               <Route path="/dashboard/monitoring" element={<MonitoringVisitsPage />} />
+              <Route path="/dashboard/visit-calendar" element={<VisitCalendarPage />} />
               <Route path="/dashboard/visits" element={<MonitoringVisitsPage />} />
               <Route path="/dashboard/assigned-schools" element={<AssignedSchoolsPage />} />
               <Route path="/dashboard/issues" element={<IssuesPage />} />

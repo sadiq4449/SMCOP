@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import enum
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 
-from sqlalchemy import JSON, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint, func
+from sqlalchemy import JSON, Date, DateTime, Enum, Float, ForeignKey, Integer, Numeric, String, Text, Time, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -46,6 +46,9 @@ class Visit(Base):
     )
     quarter: Mapped[str] = mapped_column(String(20), nullable=False)
     visit_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    scheduled_date: Mapped[date | None] = mapped_column(Date, nullable=True, index=True)
+    scheduled_time_start: Mapped[time | None] = mapped_column(Time, nullable=True)
+    scheduled_time_end: Mapped[time | None] = mapped_column(Time, nullable=True)
     visited_by_id: Mapped[uuid.UUID] = mapped_column(
         "visited_by",
         UUID(as_uuid=True),

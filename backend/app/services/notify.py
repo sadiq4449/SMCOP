@@ -101,6 +101,47 @@ def notify_visit_finalized(visit_id: str, school_id: str) -> None:
     schedule_webhook_dispatch("visit_submitted", {"visit_id": str(vid), "school_id": str(sid)})
 
 
+def notify_visit_scheduled(visit_id: str) -> None:
+    """PPP Node / partners alerted when an IE sets or updates a planned inspection window."""
+    from app.core.database import SessionLocal
+    from app.models.monitoring import Visit as VisitModel
+
+    vid = UUID(visit_id)
+    with SessionLocal() as db:
+        visit = db.get(VisitModel, vid)
+        if visit is None or visit.scheduled_date is None:
+            return
+        school = db.get(School, visit.school_id)
+        school_name = school.name if school else str(visit.school_id)
+        recipients: list[User] = []
+        recipients.extend(_users_super_admins(db))
+        recipients.extend(_government_users(db))
+        recipients.extend(_partner_users_for_school(db, visit.school_id))
+        seen: set[UUID] = set()
+        window = ""
+        ts, te = visit.scheduled_time_start, visit.scheduled_time_end
+        if ts is not None and te is not None:
+            window = f" · {ts.strftime('%H:%M')}–{te.strftime('%H:%M')}"
+        elif ts is not None:
+            window = f" · from {ts.strftime('%H:%M')}"
+        title = "Inspection scheduled"
+        msg = f"«{school_name}» ({visit.quarter}) planned for {visit.scheduled_date.isoformat()}{window}."
+        for u in recipients:
+            if u.id in seen:
+                continue
+            seen.add(u.id)
+            push_notification(
+                db,
+                user_id=u.id,
+                title=title,
+                message=msg,
+                kind="visit_scheduled",
+                ref_type="visit",
+                ref_id=str(vid),
+            )
+            send_email_best_effort(u.email, title, msg)
+
+
 def notify_report_submitted(report_id: str) -> None:
     from app.core.database import SessionLocal
 

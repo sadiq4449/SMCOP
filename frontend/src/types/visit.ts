@@ -35,8 +35,12 @@ export interface VisitDocumentRow {
 export interface VisitSummary {
   id: string
   school_id: string
+  school_name?: string | null
   quarter: string
   visit_date: string | null
+  scheduled_date?: string | null
+  scheduled_time_start?: string | null
+  scheduled_time_end?: string | null
   status: string
   aggregate_score: number | null
   visited_by_id: string

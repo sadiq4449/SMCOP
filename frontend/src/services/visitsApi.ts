@@ -13,6 +13,8 @@ export async function listVisits(params: {
   limit?: number
   school_id?: string
   quarter?: string
+  scheduled_month?: string
+  unscheduled?: boolean
 }): Promise<PaginatedVisits> {
   const { data } = await apiClient.get<ApiResponse<PaginatedVisits>>('/visits', { params })
   if (!data.success || !data.data) throw new Error(data.message)
@@ -23,6 +25,9 @@ export async function createVisit(body: {
   school_id: string
   quarter: string
   visit_date?: string | null
+  scheduled_date?: string | null
+  scheduled_time_start?: string | null
+  scheduled_time_end?: string | null
 }): Promise<VisitSummary> {
   const { data } = await apiClient.post<ApiResponse<VisitSummary>>('/visits', body)
   if (!data.success || !data.data) throw new Error(data.message)

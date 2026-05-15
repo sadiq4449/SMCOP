@@ -1,4 +1,6 @@
 from typing import Annotated
+import calendar
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Query, UploadFile, status
@@ -18,6 +20,7 @@ from app.models.monitoring import (
     Visit,
     VisitFormStatus as VFStatus,
 )
+from app.models.school import School
 from app.models.user import User, UserRole
 from app.schemas.common import APIResponse
 from app.schemas.monitoring import (
@@ -83,13 +86,17 @@ def _finalize_guard(db: Session, visit: Visit) -> None:
         )
 
 
-def _visit_summary(v: Visit) -> VisitSummary:
+def _visit_summary(v: Visit, school_name: str | None = None) -> VisitSummary:
     agg = float(v.aggregate_score) if v.aggregate_score is not None else None
     return VisitSummary(
         id=str(v.id),
         school_id=str(v.school_id),
+        school_name=school_name,
         quarter=v.quarter,
         visit_date=v.visit_date,
+        scheduled_date=v.scheduled_date,
+        scheduled_time_start=v.scheduled_time_start,
+        scheduled_time_end=v.scheduled_time_end,
         status=v.status.value,
         aggregate_score=agg,
         visited_by_id=str(v.visited_by_id),
@@ -136,6 +143,9 @@ def _visit_detail(db: Session, visit: Visit) -> VisitDetail:
         school_id=str(visit.school_id),
         quarter=visit.quarter,
         visit_date=visit.visit_date,
+        scheduled_date=visit.scheduled_date,
+        scheduled_time_start=visit.scheduled_time_start,
+        scheduled_time_end=visit.scheduled_time_end,
         status=visit.status.value,
         remarks=visit.remarks,
         aggregate_score=agg,
@@ -166,6 +176,7 @@ def _load_visit_detail(db: Session, visit_id: UUID) -> Visit | None:
 @router.post("", response_model=APIResponse[VisitSummary])
 def create_visit(
     payload: VisitCreate,
+    background_tasks: BackgroundTasks,
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[VisitSummary]:
@@ -195,6 +206,9 @@ def create_visit(
         school_id=school_uuid,
         quarter=quarter,
         visit_date=payload.visit_date,
+        scheduled_date=payload.scheduled_date,
+        scheduled_time_start=payload.scheduled_time_start,
+        scheduled_time_end=payload.scheduled_time_end,
         visited_by_id=current_user.id,
         status=VFStatus.DRAFT,
     )
@@ -213,6 +227,8 @@ def create_visit(
         ) from None
 
     db.refresh(visit)
+    sch = db.get(School, school_uuid)
+    school_nm = sch.name if sch else None
     log_activity(
         db,
         action="visits.create",
@@ -220,7 +236,9 @@ def create_visit(
         user_id=current_user.id,
         metadata={"school_id": str(school_uuid), "quarter": quarter},
     )
-    return APIResponse(success=True, message="Visit created successfully", data=_visit_summary(visit))
+    if visit.scheduled_date is not None:
+        background_tasks.add_task(notify_visit_scheduled, str(visit.id))
+    return APIResponse(success=True, message="Visit created successfully", data=_visit_summary(visit, school_nm))
 
 
 @router.get("", response_model=APIResponse[PaginatedVisits])
@@ -231,6 +249,8 @@ def list_visits(
     limit: int = Query(50, ge=1, le=100),
     school_id: UUID | None = None,
     quarter: str | None = Query(None, max_length=20),
+    scheduled_month: str | None = Query(None, max_length=7, min_length=7),
+    unscheduled: bool = Query(False),
 ) -> APIResponse[PaginatedVisits]:
     base = visit_select_filtered(current_user, db)
     if school_id is not None:
@@ -238,22 +258,58 @@ def list_visits(
     if quarter:
         base = base.where(Visit.quarter == quarter.strip())
 
+    month_bounds: tuple[date, date] | None = None
+    if scheduled_month:
+        parts = scheduled_month.split("-")
+        if len(parts) != 2:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": "scheduled_month must be YYYY-MM",
+                    "errors": {"scheduled_month": "invalid"},
+                },
+            )
+        try:
+            y = int(parts[0])
+            mo = int(parts[1])
+            start = date(y, mo, 1)
+            end = date(y, mo, calendar.monthrange(y, mo)[1])
+            month_bounds = (start, end)
+        except ValueError:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "success": False,
+                    "message": "scheduled_month must be a valid calendar month",
+                    "errors": {"scheduled_month": "invalid"},
+                },
+            ) from None
+        base = base.where(Visit.scheduled_date >= start, Visit.scheduled_date <= end)
+    elif unscheduled:
+        base = base.where(Visit.scheduled_date.is_(None), Visit.status == VFStatus.DRAFT)
+
     id_subq = base.with_only_columns(Visit.id).distinct().subquery()
     total = db.scalar(select(func.count()).select_from(id_subq)) or 0
 
+    order_cols = (Visit.created_at.desc(),)
+    if month_bounds is not None:
+        order_cols = (Visit.scheduled_date.asc(), Visit.created_at.desc())
+
     stmt = (
-        select(Visit)
+        select(Visit, School.name)
+        .join(School, Visit.school_id == School.id)
         .where(Visit.id.in_(select(id_subq.c.id)))
-        .order_by(Visit.created_at.desc())
+        .order_by(*order_cols)
         .offset(skip)
         .limit(limit)
     )
-    rows = db.scalars(stmt).unique().all()
+    rows = db.execute(stmt).all()
 
     return APIResponse(
         success=True,
         message="Visits fetched successfully",
-        data=PaginatedVisits(items=[_visit_summary(v) for v in rows], total=total),
+        data=PaginatedVisits(items=[_visit_summary(v, name) for v, name in rows], total=total),
     )
 
 
@@ -323,8 +379,17 @@ def patch_visit(
 
     data = payload.model_dump(exclude_unset=True)
 
+    schedule_keys = frozenset({"scheduled_date", "scheduled_time_start", "scheduled_time_end"})
+    schedule_touched = bool(schedule_keys.intersection(data.keys()))
+
     if "visit_date" in data:
         visit.visit_date = data["visit_date"]
+    if "scheduled_date" in data:
+        visit.scheduled_date = data["scheduled_date"]
+    if "scheduled_time_start" in data:
+        visit.scheduled_time_start = data["scheduled_time_start"]
+    if "scheduled_time_end" in data:
+        visit.scheduled_time_end = data["scheduled_time_end"]
     if "remarks" in data:
         visit.remarks = data["remarks"]
     if "gps_latitude" in data:
@@ -370,6 +435,8 @@ def patch_visit(
             metadata={"school_id": str(visit.school_id), "quarter": visit.quarter},
         )
         background_tasks.add_task(notify_visit_finalized, str(visit.id), str(visit.school_id))
+    elif schedule_touched and visit.scheduled_date is not None:
+        background_tasks.add_task(notify_visit_scheduled, str(visit.id))
 
     return APIResponse(success=True, message="Visit updated successfully", data=_visit_detail(db, visit))
 

@@ -8,7 +8,7 @@ Legend: ✅ Done · 🟡 Partial (gap noted) · ❌ Missing
 | --- | --- | --- | --- |
 | 1. Authentication & RBAC | Secure login, four roles, sessions | ✅ | Super Admin, PPP Node (Government), Independent Evaluator (IE), Partner. JWT + password reset live. |
 | 2. Dashboard & Analytics | Role-based dashboards | ✅ | `DashboardPage` per role with animated KPI gauges. |
-| 3. Visit Assignment Management | Schedule, reschedule, notify | 🟡 | Schools-to-IE mapping is done; **no visit scheduling fields (date/time window) yet**; assigned-visit notifications limited. |
+| 3. Visit Assignment Management | Schedule, reschedule, notify | 🟡 | Schools-to-IE mapping + **`scheduled_date` / optional `scheduled_time_*` on visits**, list filters (`scheduled_month`, `unscheduled`), `notify_visit_scheduled`; IE creates/edits schedule from visit form. Gap: Super Admin “schedule on behalf of IE” UX (IE-only today). |
 | 4. Inspection Management | Digital inspection capture | ✅ | `VisitFormPage`, drafts, finalize, KPI capture, classroom observations, remarks. |
 | 5. Evidence Upload | Photos & docs per visit/observation | ✅ | `documents` table with optional S3 presigned upload. |
 | 6. KPI & Scoring Engine | Configurable KPIs, weights, live score | 🟡→✅ | Seven KPIs aligned with exec summary; **`weight` column shipped this iteration**. Admin UI for editing weights pending. |
@@ -21,7 +21,7 @@ Legend: ✅ Done · 🟡 Partial (gap noted) · ❌ Missing
 | 13. Reports Center | Filter by district/quarter/school + archive | 🟡 | Quarter filter live; **no district/school filter combo yet**; archive uses status `rejected`/`approved`. |
 | 14. Alerts & Risk Monitoring | Low-perf, overdue, missing-evidence alerts | ❌ | Notifications infrastructure ready; **no automated rules yet**. |
 | 15. Benchmarking & Comparison | District/partner/observer benchmarks | 🟡 | Compare pages were removed in last refactor; **needs a leaner, scoped compare workspace**. |
-| 16. Calendar & Scheduling | Monthly visit calendar | ❌ | Requires UI calendar + scheduling backend (see EPIC 3). |
+| 16. Calendar & Scheduling | Monthly visit calendar | ✅ | **`VisitCalendarPage`** (`/dashboard/visit-calendar`): month grid + unscheduled drafts; nav for SA/government/IE/partner. |
 | 17. Notifications Center | Real-time toasts + inbox | ✅ | Notification panel with portal + DEEP link refs. |
 | 18. User & Partner Management | Manage NGO partners, school mapping, permission summary | ✅ | Partner orgs CRUD; user → school mapping; role descriptors in nav. |
 | 19. Search & Filters | Advanced filters + global search | 🟡 | Per-page filters present; **no global header search yet**. |
@@ -29,7 +29,7 @@ Legend: ✅ Done · 🟡 Partial (gap noted) · ❌ Missing
 
 ## Recommended next sprints (sized for a single PR each)
 
-1. **Visit scheduling + calendar** (EPIC 3 + 16): add `scheduled_date`, `scheduled_window` to `visits`; "Schedule visit" action from Assigned Schools; basic month view for IE.
+1. ~~**Visit scheduling + calendar**~~ — **Shipped** this iteration (backend schedule fields + notifications + calendar page). Next polish: SA schedules-for-IE flow if needed.
 2. **Action plans status flow** (EPIC 9 + 10 + 14): `work_tasks.status` enum (`open|in_progress|blocked|done`), due-date overdue rule, automated notification when overdue or assigned, completion % per school.
 3. **Findings consolidator** (EPIC 8): page that aggregates issues + observations into a severity-grouped findings view with auto strengths/weaknesses summary from observation rubric.
 4. **Benchmark workspace** (EPIC 11 + 15): district ranking, NGO partner benchmark table, recurring-issue (most-frequent category over N quarters).
