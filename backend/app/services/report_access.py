@@ -96,8 +96,9 @@ def can_export_report(db: Session, user: User, report: Report) -> bool:
     return False
 
 
-def can_comment_as_government(user: User) -> bool:
-    return user.role == UserRole.GOVERNMENT
+def can_post_oversight_comment(user: User) -> bool:
+    """PPP Node (government) and partner org reviewers may thread narrative notes only (no report body edits)."""
+    return user.role in (UserRole.GOVERNMENT, UserRole.PARTNER)
 
 
 def user_can_view_school_for_compare(db: Session, user: User, school_id: UUID) -> bool:

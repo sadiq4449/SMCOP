@@ -40,6 +40,7 @@ class ReportCommentCreate(BaseModel):
 class ReportCommentOut(BaseModel):
     id: str
     user_id: str
+    author_name: str | None = None
     body: str
     created_at: datetime
 

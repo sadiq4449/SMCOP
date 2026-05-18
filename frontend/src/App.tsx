@@ -16,6 +16,7 @@ import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
 import { ObservationsPage } from './pages/ObservationsPage'
 import { PartnerOrgsPage } from './pages/PartnerOrgsPage'
 import { ReportsWorkspacePage } from './pages/ReportsWorkspacePage'
+import { ReportComparePage } from './pages/ReportComparePage'
 import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { SchoolDetailPage } from './pages/SchoolDetailPage'
@@ -54,6 +55,7 @@ function App() {
               <Route path="/dashboard/schools/:schoolId/edit" element={<SchoolFormPage />} />
               <Route path="/dashboard/schools/:schoolId" element={<SchoolDetailPage />} />
               <Route path="/dashboard/schools" element={<SchoolsListPage />} />
+              <Route path="/dashboard/reports/compare" element={<ReportComparePage />} />
               <Route path="/dashboard/reports" element={<ReportsWorkspacePage />} />
               <Route path="/dashboard/settings" element={<SettingsPage />} />
               <Route path="/dashboard/districts" element={<DistrictsBrowsePage />} />

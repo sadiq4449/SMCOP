@@ -78,6 +78,7 @@ export interface CompareQuartersResult {
 export interface ReportComment {
   id: string
   user_id: string
+  author_name?: string | null
   body: string
   created_at: string
 }

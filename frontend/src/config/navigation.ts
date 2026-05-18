@@ -21,6 +21,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Geography', path: '/dashboard/geography' },
     { label: 'Visit calendar', path: '/dashboard/visit-calendar' },
     { label: 'Reports', path: '/dashboard/reports' },
+    { label: 'Compare reports', path: '/dashboard/reports/compare' },
     { label: 'Settings', path: '/dashboard/settings' },
   ],
   government: [
@@ -29,6 +30,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Districts', path: '/dashboard/districts' },
     { label: 'Reports', path: '/dashboard/reports' },
+    { label: 'Compare reports', path: '/dashboard/reports/compare' },
   ],
   ie: [
     sharedDashboard,
@@ -40,6 +42,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Visit calendar', path: '/dashboard/visit-calendar' },
     { label: 'Observations', path: '/dashboard/observations' },
     { label: 'Reports', path: '/dashboard/reports' },
+    { label: 'Compare reports', path: '/dashboard/reports/compare' },
   ],
   partner: [
     sharedDashboard,
@@ -48,6 +51,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Visit calendar', path: '/dashboard/visit-calendar' },
     { label: 'Observations', path: '/dashboard/observations' },
     { label: 'Reports', path: '/dashboard/reports' },
+    { label: 'Compare reports', path: '/dashboard/reports/compare' },
   ],
 }
 

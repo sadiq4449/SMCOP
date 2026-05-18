@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { Link } from 'react-router-dom'
+
 import { ReportSnapshotPanel } from '../components/reports/ReportSnapshotPanel'
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
@@ -10,9 +12,12 @@ import {
   getReport,
   listReports,
   patchReport,
+  reviewReport,
+  listReportComments,
+  addReportComment,
 } from '../services/reportsApi'
+import type { ReportComment, ReportSummary } from '../types/report'
 import type { SchoolSummary } from '../types/school'
-import type { ReportSummary } from '../types/report'
 
 const workspaceRoles = ['super_admin', 'ie', 'government', 'partner'] as const
 
@@ -53,6 +58,10 @@ export function ReportsWorkspacePage() {
   const [formInfra, setFormInfra] = useState('')
   const [formDaily, setFormDaily] = useState('')
   const [saveBusy, setSaveBusy] = useState(false)
+  const [comments, setComments] = useState<ReportComment[]>([])
+  const [oversightNote, setOversightNote] = useState('')
+  const [decisionRemarks, setDecisionRemarks] = useState('')
+  const [commentBusy, setCommentBusy] = useState(false)
 
   const role = user?.role
 
@@ -121,6 +130,20 @@ export function ReportsWorkspacePage() {
     void reload()
   }, [reload])
 
+  useEffect(() => {
+    if (!selected?.id) {
+      setComments([])
+      return
+    }
+    let cancelled = false
+    void listReportComments(selected.id).then((rows) => {
+      if (!cancelled) setComments(rows)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [selected?.id])
+
   const loadDetail = async (id: string) => {
     setDetailLoading(true)
     setError(null)
@@ -166,6 +189,43 @@ export function ReportsWorkspacePage() {
     role === 'super_admin' || (role === 'ie' && draftEditable)
   const canSubmitDraft =
     draftEditable && (role === 'super_admin' || role === 'ie')
+
+  const canPostOversightNote = role === 'government' || role === 'partner'
+
+  const postOversightNote = async () => {
+    if (!selected?.id || !oversightNote.trim()) return
+    setCommentBusy(true)
+    setError(null)
+    try {
+      await addReportComment(selected.id, oversightNote.trim())
+      setOversightNote('')
+      const rows = await listReportComments(selected.id)
+      setComments(rows)
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e, 'Could not post review note'))
+    } finally {
+      setCommentBusy(false)
+    }
+  }
+
+  const runDecision = async (decision: 'approved' | 'rejected') => {
+    if (!selected?.id || user?.role !== 'super_admin') return
+    setSaveBusy(true)
+    setError(null)
+    try {
+      const updated = await reviewReport(selected.id, {
+        status: decision,
+        remarks: decisionRemarks.trim() || null,
+      })
+      setSelected(updated)
+      setDecisionRemarks('')
+      await reload()
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e, 'Review failed'))
+    } finally {
+      setSaveBusy(false)
+    }
+  }
 
   const onSaveBody = async () => {
     if (!selected) return
@@ -237,13 +297,39 @@ export function ReportsWorkspacePage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Reporting</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">Quarterly reports</h1>
-        <p className="mt-1 text-sm text-text-muted">
-          Draft reports pull KPIs, observations, and attendance slices from finalized visits. IE drafts submit for Super
-          Admin review; PPP Node and partners have read/export access in scope.
-        </p>
+      <header className="rounded-2xl border border-muted-surface bg-gradient-to-br from-section to-surface p-6 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Reporting</p>
+            <h1 className="mt-1 text-2xl font-semibold text-text-primary">Quarterly reports</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-relaxed text-text-muted">
+              Super Admin assigns schools to Independent Evaluators (under Users → IE profile). IE completes KPI-aligned
+              monitoring visits, then drafts quarterly narrative here and submits for formal approval. Super Admin may edit or
+              resubmit content anytime; PPP Node and Partner Organization colleagues preview outcomes, download Excel/PDF
+              (PDF adds KPI charts), and attach threaded oversight notes only—they cannot alter IE narrative fields.
+            </p>
+          </div>
+          <Link
+            to="/dashboard/reports/compare"
+            className="rounded-lg border border-muted-surface bg-surface px-4 py-2 text-sm font-semibold text-secondary shadow-sm hover:bg-muted-surface/40"
+          >
+            Compare reports →
+          </Link>
+        </div>
+        <ol className="mt-4 grid gap-2 text-xs text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
+          <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
+            <span className="font-semibold text-primary">1.</span> Assign schools to IE (Super Admin).
+          </li>
+          <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
+            <span className="font-semibold text-primary">2.</span> IE finalizes visit & KPI evidence.
+          </li>
+          <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
+            <span className="font-semibold text-primary">3.</span> IE drafts report → Submit.
+          </li>
+          <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
+            <span className="font-semibold text-primary">4.</span> Super Admin approves; Gov/Partner note & export.
+          </li>
+        </ol>
       </header>
 
       <div className="flex flex-wrap items-end gap-4">
@@ -380,6 +466,12 @@ export function ReportsWorkspacePage() {
               <p className="mt-1 text-sm capitalize text-text-muted">Status: {selected.status}</p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <Link
+                to="/dashboard/reports/compare"
+                className="rounded-lg border border-muted-surface px-3 py-1.5 text-sm font-medium text-secondary hover:bg-muted-surface/40"
+              >
+                Compare
+              </Link>
               <button
                 type="button"
                 onClick={() => void onExport('xlsx')}
@@ -405,10 +497,107 @@ export function ReportsWorkspacePage() {
                 <ReportSnapshotPanel snapshot={selected.generated_snapshot} />
               </div>
 
-              <div className="border-t border-muted-surface pt-4">
-                <h3 className="text-sm font-semibold text-text-primary">Narrative</h3>
+              {user.role === 'super_admin' && selected.status === 'submitted' ? (
+                <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-4">
+                  <h3 className="text-sm font-semibold text-text-primary">Formal Super Admin decision</h3>
+                  <p className="mt-1 text-xs text-text-muted">
+                    Approve to lock the submission or reject to send narrative back for corrections (IE must revise while in
+                    draft after reopen).
+                  </p>
+                  <label className="mt-3 block text-sm">
+                    <span className="font-medium text-text-secondary">Decision remarks (optional)</span>
+                    <textarea
+                      value={decisionRemarks}
+                      onChange={(e) => setDecisionRemarks(e.target.value)}
+                      rows={2}
+                      className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                      placeholder="Optional feedback attached to the approval/rejection record…"
+                    />
+                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      disabled={saveBusy}
+                      onClick={() => void runDecision('approved')}
+                      className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      Approve report
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saveBusy}
+                      onClick={() => void runDecision('rejected')}
+                      className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                    >
+                      Reject & request changes
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {(selected.status === 'approved' || selected.status === 'rejected') && selected.review_remarks ? (
+                <div className="rounded-xl border border-muted-surface bg-muted-surface/20 px-4 py-3 text-sm">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    Formal decision remarks
+                  </p>
+                  <p className="mt-1 whitespace-pre-wrap text-text-primary">{selected.review_remarks}</p>
+                </div>
+              ) : null}
+
+              <div className="rounded-xl border border-muted-surface bg-section/40 p-4">
+                <h3 className="text-sm font-semibold text-text-primary">PPP Node & partner oversight notes</h3>
                 <p className="mt-1 text-xs text-text-muted">
-                  Super Admin may edit anytime; IE edits while status is draft. Exports include saved narrative fields.
+                  Threaded review comments only—does not change KPI narrative fields or substitute formal approval above.
+                </p>
+                <ul className="mt-3 space-y-2">
+                  {comments.map((c) => (
+                    <li key={c.id} className="rounded-lg border border-muted-surface bg-surface px-3 py-2">
+                      <p className="text-[11px] text-text-muted">
+                        <span className="font-semibold text-text-secondary">{c.author_name ?? 'Reviewer'}</span>
+                        {' · '}
+                        {new Date(c.created_at).toLocaleString()}
+                      </p>
+                      <p className="mt-1 whitespace-pre-wrap text-sm text-text-primary">{c.body}</p>
+                    </li>
+                  ))}
+                  {comments.length === 0 ? (
+                    <li className="text-xs italic text-text-muted">No oversight notes yet.</li>
+                  ) : null}
+                </ul>
+                {canPostOversightNote ? (
+                  <div className="mt-4 space-y-2 border-t border-muted-surface pt-4">
+                    <label className="block text-sm">
+                      <span className="font-medium text-text-secondary">Add oversight note</span>
+                      <textarea
+                        value={oversightNote}
+                        onChange={(e) => setOversightNote(e.target.value)}
+                        rows={3}
+                        className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                        placeholder="Observations for Government / NGO partner reviewers…"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={commentBusy || !oversightNote.trim()}
+                      onClick={() => void postOversightNote()}
+                      className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:bg-primary disabled:opacity-50"
+                    >
+                      {commentBusy ? 'Posting…' : 'Post oversight note'}
+                    </button>
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-text-muted">
+                    Oversight notes are enabled for PPP Node (Government) and Partner Organization viewers with export
+                    access.
+                  </p>
+                )}
+              </div>
+
+              <div className="border-t border-muted-surface pt-4">
+                <h3 className="text-sm font-semibold text-text-primary">IE narrative & principal inputs</h3>
+                <p className="mt-1 text-xs text-text-muted">
+                  Super Admin may edit anytime; IE edits while status is draft. PPP Node / partners are view-only here—use
+                  oversight notes above. PDF exports include KPI bar charts from the snapshot.
                 </p>
               </div>
 

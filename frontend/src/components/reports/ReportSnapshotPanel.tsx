@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react'
+
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v != null && typeof v === 'object' && !Array.isArray(v)
 }
@@ -20,6 +22,39 @@ function infraStatusLabel(status: string): string {
 function visitStatusLabel(status: unknown): string {
   if (typeof status !== 'string') return '—'
   return status.replace(/_/g, ' ')
+}
+
+function KpiPerformanceBar({ score, maxScore }: { score: unknown; maxScore: unknown }) {
+  const [pctDisplay, setPctDisplay] = useState(0)
+  let mx = Number(maxScore)
+  if (!Number.isFinite(mx) || mx <= 0) mx = 5
+  let sc = Number(score)
+  if (!Number.isFinite(sc)) sc = 0
+  const target = Math.min(100, Math.round((sc / mx) * 100))
+
+  useEffect(() => {
+    const reduced =
+      typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    if (reduced) {
+      setPctDisplay(target)
+      return
+    }
+    setPctDisplay(0)
+    const id = window.requestAnimationFrame(() => setPctDisplay(target))
+    return () => window.cancelAnimationFrame(id)
+  }, [target])
+
+  return (
+    <div className="flex min-w-[120px] items-center gap-2">
+      <div className="h-2 min-w-[72px] flex-1 overflow-hidden rounded-full bg-muted-surface">
+        <div
+          className="h-full rounded-full bg-gradient-to-r from-secondary to-primary transition-[width] duration-[850ms] ease-out"
+          style={{ width: `${pctDisplay}%` }}
+        />
+      </div>
+      <span className="shrink-0 tabular-nums text-[11px] text-text-muted">{target}%</span>
+    </div>
+  )
 }
 
 function MetricCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
@@ -177,6 +212,9 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
                   return (
                     <tr key={typeof row.kpi_id === 'string' ? row.kpi_id : idx} className="bg-surface">
                       <td className="px-4 py-2 font-medium text-text-primary">{name}</td>
+                      <td className="px-4 py-2">
+                        <KpiPerformanceBar score={row.score} maxScore={row.max_score} />
+                      </td>
                       <td className="px-4 py-2 tabular-nums text-text-secondary">{score}</td>
                       <td className="px-4 py-2 tabular-nums text-text-muted">{max}</td>
                       <td className="max-w-xs px-4 py-2 text-xs text-text-muted">{remarks}</td>

@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from app.api.deps import get_current_user
 from app.core.database import get_db
@@ -30,12 +30,12 @@ from app.schemas.report import (
 )
 from app.services.audit import log_activity
 from app.services.report_access import (
-    can_comment_as_government,
     can_create_report,
     can_edit_report_body,
     can_export_report,
     can_read_report,
     can_review_report_status,
+    can_post_oversight_comment,
     can_submit_report,
     reports_select_filtered,
     user_can_view_school_for_compare,
@@ -53,6 +53,18 @@ from app.services.report_generation import (
 router = APIRouter(prefix="/reports", tags=["reports"])
 
 AuthUser = Annotated[User, Depends(get_current_user)]
+
+
+def _comment_out(c: ReportComment) -> ReportCommentOut:
+    author = getattr(c, "user", None)
+    author_name = author.full_name if author else None
+    return ReportCommentOut(
+        id=str(c.id),
+        user_id=str(c.user_id),
+        author_name=author_name,
+        body=c.body,
+        created_at=c.created_at,
+    )
 
 
 def _forbidden() -> HTTPException:
@@ -451,7 +463,7 @@ def add_report_comment(
     current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[ReportCommentOut]:
-    if not can_comment_as_government(current_user):
+    if not can_post_oversight_comment(current_user):
         raise _forbidden()
 
     report = db.get(Report, report_id)
@@ -464,6 +476,9 @@ def add_report_comment(
     db.add(c)
     db.commit()
     db.refresh(c)
+    row = db.scalars(
+        select(ReportComment).where(ReportComment.id == c.id).options(joinedload(ReportComment.user)),
+    ).unique().one()
 
     log_activity(
         db,
@@ -476,12 +491,7 @@ def add_report_comment(
     return APIResponse(
         success=True,
         message="Comment posted successfully",
-        data=ReportCommentOut(
-            id=str(c.id),
-            user_id=str(c.user_id),
-            body=c.body,
-            created_at=c.created_at,
-        ),
+        data=_comment_out(row),
     )
 
 
@@ -498,15 +508,16 @@ def list_report_comments(
         raise _forbidden()
 
     rows = db.scalars(
-        select(ReportComment).where(ReportComment.report_id == report_id).order_by(ReportComment.created_at.asc()),
-    ).all()
+        select(ReportComment)
+        .where(ReportComment.report_id == report_id)
+        .options(joinedload(ReportComment.user))
+        .order_by(ReportComment.created_at.asc()),
+    ).unique().all()
 
     return APIResponse(
         success=True,
         message="Comments fetched successfully",
-        data=[
-            ReportCommentOut(id=str(r.id), user_id=str(r.user_id), body=r.body, created_at=r.created_at) for r in rows
-        ],
+        data=[_comment_out(r) for r in rows],
     )
 
 

@@ -16,6 +16,58 @@ def _pdf_safe(text: str) -> str:
     return text.encode("latin-1", errors="replace").decode("latin-1")
 
 
+def _append_kpi_chart_pdf(pdf: FPDF, snap: object) -> None:
+    """Horizontal bar chart of KPI scores (included in exported PDF)."""
+    if not isinstance(snap, dict):
+        return
+    scores = snap.get("kpi_scores")
+    if not isinstance(scores, list) or not scores:
+        return
+    pdf.add_page()
+    pdf.set_font("Helvetica", "B", 13)
+    pdf.multi_cell(0, 8, _pdf_safe("KPI performance chart"))
+    pdf.ln(1)
+    pdf.set_font("Helvetica", size=9)
+    pdf.multi_cell(
+        0,
+        5,
+        _pdf_safe("Bars show score achieved versus maximum for each indicator (from the report snapshot)."),
+    )
+    pdf.ln(3)
+    bar_total_w = 108.0
+    label_w = 72.0
+    bar_x = 86.0
+    pdf.set_draw_color(210, 213, 219)
+    pdf.set_fill_color(37, 99, 235)
+    for row in scores:
+        if not isinstance(row, dict):
+            continue
+        if pdf.get_y() > 268:
+            pdf.add_page()
+        name_raw = row.get("kpi_name")
+        name = _pdf_safe(str(name_raw or "Indicator")[:42])
+        score_raw, mx_raw = row.get("score"), row.get("max_score")
+        if mx_raw is None:
+            mx_raw = 5
+        try:
+            sc = float(score_raw) if score_raw is not None else 0.0
+            mx = float(mx_raw) if mx_raw else 5.0
+        except (TypeError, ValueError):
+            sc, mx = 0.0, 5.0
+        pct = min(1.0, max(0.0, sc / mx)) if mx > 0 else 0.0
+        y = pdf.get_y()
+        pdf.set_xy(14, y)
+        pdf.set_font("Helvetica", size=9)
+        pdf.cell(label_w, 6, name[:36], border=0)
+        pdf.rect(bar_x, y, bar_total_w, 5.5, style="D")
+        inner_w = bar_total_w * pct
+        if inner_w > 0.15:
+            pdf.rect(bar_x, y, inner_w, 5.5, style="F")
+        pdf.set_xy(bar_x + bar_total_w + 2, y)
+        pdf.set_font("Helvetica", size=9)
+        pdf.cell(28, 6, _pdf_safe(f"{sc:g} / {mx:g}"), ln=1)
+
+
 def report_to_xlsx(report: Report) -> bytes:
     wb = Workbook()
     ws = wb.active
@@ -93,6 +145,8 @@ def report_to_pdf(report: Report) -> bytes:
                 f"student daily rows: {att.get('student_daily_entries')})"
             ),
         )
+
+    _append_kpi_chart_pdf(pdf, snap)
 
     out = pdf.output(dest="S")
     if isinstance(out, str):
