@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 from io import BytesIO
 
 from fpdf import FPDF
 from openpyxl import Workbook
 
 from app.models.report import Report
+
+_logger = logging.getLogger(__name__)
 
 
 def _pdf_safe(text: str) -> str:
@@ -17,7 +20,11 @@ def _pdf_safe(text: str) -> str:
 
 
 def _append_kpi_chart_pdf(pdf: FPDF, snap: object) -> None:
-    """Horizontal bar chart of KPI scores (included in exported PDF)."""
+    """Horizontal bar chart of KPI scores (included in exported PDF).
+
+    Uses printable width (``epw``) so bars stay inside margins — fixed coordinates
+    previously exceeded page width and caused FPDF to abort (broken PDF for Gov/IE/etc.).
+    """
     if not isinstance(snap, dict):
         return
     scores = snap.get("kpi_scores")
@@ -34,18 +41,26 @@ def _append_kpi_chart_pdf(pdf: FPDF, snap: object) -> None:
         _pdf_safe("Bars show score achieved versus maximum for each indicator (from the report snapshot)."),
     )
     pdf.ln(3)
-    bar_total_w = 108.0
-    label_w = 72.0
-    bar_x = 86.0
+
+    epw = float(getattr(pdf, "epw", pdf.w - pdf.l_margin - pdf.r_margin))
+    label_w = min(72.0, epw * 0.40)
+    frac_w = 20.0
+    gap = 3.0
+    slack = 4.0  # reserve space so bar + label + fraction columns stay inside printable width
+    bar_total_w = max(36.0, epw - label_w - frac_w - gap - slack)
+    bar_x = pdf.l_margin + label_w + gap
+
     pdf.set_draw_color(210, 213, 219)
     pdf.set_fill_color(37, 99, 235)
+
     for row in scores:
         if not isinstance(row, dict):
             continue
-        if pdf.get_y() > 268:
+        if pdf.get_y() > pdf.h - pdf.b_margin - 14:
             pdf.add_page()
+
         name_raw = row.get("kpi_name")
-        name = _pdf_safe(str(name_raw or "Indicator")[:42])
+        name = _pdf_safe(str(name_raw or "Indicator"))[:40]
         score_raw, mx_raw = row.get("score"), row.get("max_score")
         if mx_raw is None:
             mx_raw = 5
@@ -55,17 +70,17 @@ def _append_kpi_chart_pdf(pdf: FPDF, snap: object) -> None:
         except (TypeError, ValueError):
             sc, mx = 0.0, 5.0
         pct = min(1.0, max(0.0, sc / mx)) if mx > 0 else 0.0
+
         y = pdf.get_y()
-        pdf.set_xy(14, y)
+        pdf.set_xy(pdf.l_margin, y)
         pdf.set_font("Helvetica", size=9)
-        pdf.cell(label_w, 6, name[:36], border=0)
+        pdf.cell(label_w, 6, name[:32], border=0)
         pdf.rect(bar_x, y, bar_total_w, 5.5, style="D")
         inner_w = bar_total_w * pct
         if inner_w > 0.15:
             pdf.rect(bar_x, y, inner_w, 5.5, style="F")
         pdf.set_xy(bar_x + bar_total_w + 2, y)
-        pdf.set_font("Helvetica", size=9)
-        pdf.cell(28, 6, _pdf_safe(f"{sc:g} / {mx:g}"), ln=1)
+        pdf.cell(frac_w, 6, _pdf_safe(f"{sc:g}/{mx:g}")[:14], ln=1)
 
 
 def report_to_xlsx(report: Report) -> bytes:
@@ -87,12 +102,21 @@ def report_to_xlsx(report: Report) -> bytes:
     ws.append([json.dumps(snap, indent=2)])
 
     ws2 = wb.create_sheet("KPI rows")
-    ws2.append(["kpi_name", "score", "max_score"])
+    ws2.append(["kpi_name", "score", "max_score", "pct_of_max"])
     scores = snap.get("kpi_scores") if isinstance(snap, dict) else None
     if isinstance(scores, list):
         for row in scores:
             if isinstance(row, dict):
-                ws2.append([row.get("kpi_name"), row.get("score"), row.get("max_score")])
+                sc_raw, mx_raw = row.get("score"), row.get("max_score")
+                if mx_raw is None:
+                    mx_raw = 5
+                try:
+                    s_f = float(sc_raw) if sc_raw is not None else 0.0
+                    m_f = float(mx_raw) if mx_raw else 5.0
+                except (TypeError, ValueError):
+                    s_f, m_f = 0.0, 5.0
+                pct = round(100.0 * s_f / m_f, 1) if m_f > 0 else 0.0
+                ws2.append([row.get("kpi_name"), row.get("score"), row.get("max_score"), pct])
 
     bio = BytesIO()
     wb.save(bio)
@@ -146,7 +170,10 @@ def report_to_pdf(report: Report) -> bytes:
             ),
         )
 
-    _append_kpi_chart_pdf(pdf, snap)
+    try:
+        _append_kpi_chart_pdf(pdf, snap)
+    except Exception as exc:
+        _logger.warning("Skipping KPI chart page in PDF export: %s", exc)
 
     out = pdf.output(dest="S")
     if isinstance(out, str):

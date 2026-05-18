@@ -92,11 +92,52 @@ export async function compareReports(quarter: string, schoolIdsCsv: string): Pro
   return data.data
 }
 
+async function assertBinaryExport(blob: Blob, format: 'xlsx' | 'pdf') {
+  const prefix = new Uint8Array(await blob.slice(0, 8).arrayBuffer())
+  if (format === 'pdf') {
+    const sig = String.fromCharCode(...prefix.slice(0, 4))
+    if (sig !== '%PDF') {
+      const text = await blob.text()
+      let hint = 'Server returned a non-PDF response.'
+      try {
+        const j = JSON.parse(text) as { message?: string }
+        if (typeof j.message === 'string' && j.message.trim()) hint = j.message.trim()
+      } catch {
+        if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+          hint = 'Received HTML instead of a PDF—API routing or auth may have failed.'
+        }
+      }
+      throw new Error(hint)
+    }
+    return
+  }
+  // XLSX is a ZIP archive — local file header starts with PK
+  if (prefix[0] !== 0x50 || prefix[1] !== 0x4b) {
+    const text = await blob.text()
+    let hint = 'Server returned a non-Excel response.'
+    try {
+      const j = JSON.parse(text) as { message?: string }
+      if (typeof j.message === 'string' && j.message.trim()) hint = j.message.trim()
+    } catch {
+      /* keep hint */
+    }
+    throw new Error(hint)
+  }
+}
+
 export async function downloadReportExport(reportId: string, format: 'xlsx' | 'pdf'): Promise<Blob> {
   const res = await apiClient.get<Blob>(`/reports/${reportId}/export`, {
     params: { format },
     responseType: 'blob',
     validateStatus: () => true,
+    headers: {
+      Accept:
+        format === 'pdf'
+          ? 'application/pdf,application/octet-stream;q=0.9,*/*;q=0.8'
+          : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/octet-stream;q=0.9,*/*;q=0.8',
+    },
   })
-  return unwrapBlobResponse(res, 'Export failed')
+  const blob = await unwrapBlobResponse(res, 'Export failed')
+  await assertBinaryExport(blob, format)
+  return blob
 }

@@ -111,12 +111,20 @@ export function UsersListPage() {
             Create accounts, assign roles, districts, partner scope, and school access.
           </p>
         </div>
-        <Link
-          to="/dashboard/users/new"
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary"
-        >
-          Add user
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to="/dashboard/ie-assignments"
+            className="rounded-lg border border-muted-surface px-4 py-2 text-sm font-semibold text-secondary hover:bg-muted-surface/40"
+          >
+            IE school assignments
+          </Link>
+          <Link
+            to="/dashboard/users/new"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary"
+          >
+            Add user
+          </Link>
+        </div>
       </header>
 
       <section className="grid gap-4 rounded-2xl border border-muted-surface bg-surface p-4 shadow-sm md:grid-cols-3 lg:grid-cols-6">
@@ -246,6 +254,17 @@ export function UsersListPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right whitespace-nowrap">
+                    {u.role === 'ie' ? (
+                      <>
+                        <Link
+                          to={`/dashboard/ie-assignments?user=${encodeURIComponent(u.id)}`}
+                          className="font-medium text-secondary hover:text-primary"
+                        >
+                          Assign schools
+                        </Link>
+                        {' · '}
+                      </>
+                    ) : null}
                     <Link
                       to={`/dashboard/users/${u.id}/edit`}
                       className="font-medium text-secondary hover:text-primary"

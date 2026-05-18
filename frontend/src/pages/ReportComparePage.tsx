@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
@@ -166,7 +166,11 @@ export function ReportComparePage() {
     return m
   }, [schoolPickList])
 
-  if (!user || !['super_admin', 'government', 'ie', 'partner'].includes(user.role)) {
+  if (user?.role === 'ie') {
+    return <Navigate to="/dashboard/reports" replace />
+  }
+
+  if (!user || !['super_admin', 'government', 'partner'].includes(user.role)) {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
         <p className="text-text-secondary">Your role cannot access comparison tools.</p>
@@ -219,8 +223,7 @@ export function ReportComparePage() {
         <section className="space-y-4 rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">
           <h2 className="text-lg font-semibold text-text-primary">Cross-school comparison</h2>
           <p className="text-sm text-text-muted">
-            Pick {user.role === 'ie' ? 'schools assigned to you' : 'any schools in scope'}, same quarter. Up to 12
-            schools.
+            Pick schools visible to your role for the same quarter (up to 12 schools).
           </p>
           <label className="block text-sm">
             <span className="font-medium text-text-secondary">Search schools</span>

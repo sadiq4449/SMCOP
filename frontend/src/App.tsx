@@ -10,6 +10,7 @@ import { DistrictsBrowsePage } from './pages/DistrictsBrowsePage'
 import { ApiRoutingHintPage } from './pages/ApiRoutingHintPage'
 import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 import { GeographyPage } from './pages/GeographyPage'
+import { IeSchoolAssignmentsPage } from './pages/IeSchoolAssignmentsPage'
 import { IssuesPage } from './pages/IssuesPage'
 import { LoginPage } from './pages/LoginPage'
 import { MonitoringVisitsPage } from './pages/MonitoringVisitsPage'
@@ -48,6 +49,7 @@ function App() {
               <Route path="/dashboard/users/new" element={<UserFormPage />} />
               <Route path="/dashboard/users/:userId/edit" element={<UserFormPage />} />
               <Route path="/dashboard/users" element={<UsersListPage />} />
+              <Route path="/dashboard/ie-assignments" element={<IeSchoolAssignmentsPage />} />
               <Route path="/dashboard/audit-log" element={<ActivityLogsPage />} />
               <Route path="/dashboard/partner-orgs" element={<PartnerOrgsPage />} />
               <Route path="/dashboard/geography" element={<GeographyPage />} />

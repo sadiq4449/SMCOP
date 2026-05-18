@@ -69,6 +69,7 @@ export function ReportsWorkspacePage() {
     !!user && (workspaceRoles as readonly string[]).includes(user.role)
 
   const canCreateDraft = role === 'super_admin' || role === 'ie'
+  const showCompareLinks = role !== 'ie'
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedSchoolQ(schoolSearch.trim()), 280)
@@ -309,12 +310,14 @@ export function ReportsWorkspacePage() {
               (PDF adds KPI charts), and attach threaded oversight notes only—they cannot alter IE narrative fields.
             </p>
           </div>
-          <Link
-            to="/dashboard/reports/compare"
-            className="rounded-lg border border-muted-surface bg-surface px-4 py-2 text-sm font-semibold text-secondary shadow-sm hover:bg-muted-surface/40"
-          >
-            Compare reports →
-          </Link>
+          {showCompareLinks ? (
+            <Link
+              to="/dashboard/reports/compare"
+              className="rounded-lg border border-muted-surface bg-surface px-4 py-2 text-sm font-semibold text-secondary shadow-sm hover:bg-muted-surface/40"
+            >
+              Compare reports →
+            </Link>
+          ) : null}
         </div>
         <ol className="mt-4 grid gap-2 text-xs text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
           <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
@@ -466,12 +469,14 @@ export function ReportsWorkspacePage() {
               <p className="mt-1 text-sm capitalize text-text-muted">Status: {selected.status}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link
-                to="/dashboard/reports/compare"
-                className="rounded-lg border border-muted-surface px-3 py-1.5 text-sm font-medium text-secondary hover:bg-muted-surface/40"
-              >
-                Compare
-              </Link>
+              {showCompareLinks ? (
+                <Link
+                  to="/dashboard/reports/compare"
+                  className="rounded-lg border border-muted-surface px-3 py-1.5 text-sm font-medium text-secondary hover:bg-muted-surface/40"
+                >
+                  Compare
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={() => void onExport('xlsx')}

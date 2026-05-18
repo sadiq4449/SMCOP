@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { roleLabels } from '../config/navigation'
 import { useAuth } from '../context/AuthContext'
@@ -36,6 +36,8 @@ function schoolDetailToSummary(s: SchoolDetail): SchoolSummary {
 export function UserFormPage() {
   const { userId } = useParams<{ userId?: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const schoolAnchorRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
   const isEdit = Boolean(userId)
 
@@ -150,6 +152,14 @@ export function UserFormPage() {
 
   const showSchoolPicker = role === IE_ROLE
   const showPartnerOrgPicker = role === 'partner'
+
+  useEffect(() => {
+    if (loading || location.hash !== '#ie-schools' || !showSchoolPicker) return
+    const frame = window.requestAnimationFrame(() => {
+      schoolAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading, location.hash, showSchoolPicker])
 
   const selectedSchoolLabels = useMemo(() => {
     const map = new Map(schoolChoices.map((s) => [s.id, s.name]))
@@ -316,7 +326,11 @@ export function UserFormPage() {
           ) : null}
 
           {showSchoolPicker ? (
-            <div className="md:col-span-2 space-y-3 rounded-xl border border-muted-surface bg-section/40 p-4">
+            <div
+              id="ie-schools"
+              ref={schoolAnchorRef}
+              className="md:col-span-2 space-y-3 rounded-xl border border-muted-surface bg-section/40 p-4"
+            >
               <div>
                 <h3 className="text-sm font-semibold text-text-primary">Assigned schools (IE)</h3>
                 <p className="mt-1 text-xs text-text-muted">

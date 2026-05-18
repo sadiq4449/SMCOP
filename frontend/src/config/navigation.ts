@@ -15,6 +15,7 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     sharedDashboard,
     opsNav,
     { label: 'Users', path: '/dashboard/users' },
+    { label: 'IE school assignments', path: '/dashboard/ie-assignments' },
     { label: 'Audit log', path: '/dashboard/audit-log' },
     { label: 'Schools', path: '/dashboard/schools' },
     { label: 'Partner orgs', path: '/dashboard/partner-orgs' },
@@ -42,7 +43,6 @@ const roleNavigation: Record<UserRole, NavItem[]> = {
     { label: 'Visit calendar', path: '/dashboard/visit-calendar' },
     { label: 'Observations', path: '/dashboard/observations' },
     { label: 'Reports', path: '/dashboard/reports' },
-    { label: 'Compare reports', path: '/dashboard/reports/compare' },
   ],
   partner: [
     sharedDashboard,
