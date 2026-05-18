@@ -33,7 +33,7 @@ export function ActivityLogsPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Audit log is visible to Super Admin only.</p>
+        <p className="text-text-secondary">The audit log is visible to programme administrators.</p>
       </section>
     )
   }

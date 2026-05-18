@@ -38,7 +38,7 @@ export function AssignedSchoolsPage() {
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">School access</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Assigned schools</h1>
           <p className="mt-1 text-sm text-text-muted">
-            Schools your IE account may monitor — start a quarterly visit from here.
+            Schools assigned to your evaluator account — begin or resume quarterly visits here.
           </p>
         </div>
         <Link

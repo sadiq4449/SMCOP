@@ -135,7 +135,7 @@ export function SchoolFormPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Creating and editing schools is restricted to Super Admin.</p>
+        <p className="text-text-secondary">Creating and editing schools is restricted to programme administrators.</p>
         <Link to="/dashboard/schools" className="mt-4 inline-block text-sm font-medium text-secondary hover:text-primary">
           ← Back to schools
         </Link>
@@ -146,7 +146,7 @@ export function SchoolFormPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     if (!ucId) {
-      setError('Select district → taluka → union council')
+      setError('Select district, taluka, and union council in order.')
       return
     }
 

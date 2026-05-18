@@ -130,7 +130,7 @@ export interface AssigneeOption {
   role: string
 }
 
-/** Super Admin / DEO: principals, teachers, or issue-specific roles for assignment pickers. */
+/** Programme administrators / DEO: principals, teachers, or issue-specific roles for assignment pickers. */
 export async function listSchoolAssignees(schoolId: string, purpose: 'task' | 'issue') {
   const { data } = await apiClient.get<ApiResponse<{ items: AssigneeOption[] }>>('/assignees', {
     params: { school_id: schoolId, purpose },

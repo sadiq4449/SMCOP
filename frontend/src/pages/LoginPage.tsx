@@ -92,8 +92,7 @@ export function LoginPage() {
         </p>
 
         <p className="mt-6 text-center text-[13px] leading-relaxed text-text-muted">
-          Need an account or locked out? Contact your programme <span className="text-text-secondary">Super Admin</span>{' '}
-          or IT contact.
+          Need access or locked out? Contact your programme administrator or IT service desk.
         </p>
       </div>
     </div>

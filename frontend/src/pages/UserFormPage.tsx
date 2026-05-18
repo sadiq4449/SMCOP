@@ -212,7 +212,7 @@ export function UserFormPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Only Super Admin can manage users.</p>
+        <p className="text-text-secondary">Only programme administrators may manage user accounts.</p>
       </section>
     )
   }
@@ -231,7 +231,7 @@ export function UserFormPage() {
         <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Administration</p>
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">{isEdit ? 'Edit user' : 'New user'}</h1>
         <p className="mt-1 text-sm text-text-muted">
-          SMCOP roles: Super Admin, PPP Node (Government), Independent Evaluator (school assignments), Partner organization
+          Roles: Programme administrator, PPP Node (Government), Independent Evaluator (school roster), Partner organization
           (oversight on schools tied to their org).
         </p>
       </header>
@@ -332,7 +332,7 @@ export function UserFormPage() {
               className="md:col-span-2 space-y-3 rounded-xl border border-muted-surface bg-section/40 p-4"
             >
               <div>
-                <h3 className="text-sm font-semibold text-text-primary">Assigned schools (IE)</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Assigned schools (Independent Evaluator)</h3>
                 <p className="mt-1 text-xs text-text-muted">
                   Independent Evaluators may only access visits and reporting for schools listed here.
                 </p>

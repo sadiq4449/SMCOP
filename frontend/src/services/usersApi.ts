@@ -34,7 +34,7 @@ export async function updateUser(id: string, body: Record<string, unknown>): Pro
   return data.data
 }
 
-/** Super Admin replaces Independent Evaluator school assignments (PATCH ``/users/{id}/assigned-schools``). */
+/** Programme administrators replace Independent Evaluator school assignments (PATCH ``/users/{id}/assigned-schools``). */
 export async function patchUserAssignedSchools(
   id: string,
   assignedSchools: string[],

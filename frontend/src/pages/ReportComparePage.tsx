@@ -185,15 +185,15 @@ export function ReportComparePage() {
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Analytics</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Report comparison</h1>
           <p className="mt-2 max-w-3xl text-sm leading-relaxed text-text-muted">
-            Compare quarterly monitoring outcomes across schools for the same period, track one school across multiple
-            quarters, or roll up districts (PPP Node / Super Admin). Scoped automatically to schools your role may access.
+            Compare quarterly monitoring results across schools for the same period, follow one school across quarters, or
+            review district roll-ups (PPP Node and programme administrators). Views respect the schools your account may access.
           </p>
         </div>
         <Link
           to="/dashboard/reports"
           className="rounded-lg border border-muted-surface px-4 py-2 text-sm font-semibold text-secondary hover:bg-muted-surface/40"
         >
-          ← Quarterly reports
+          Back to quarterly reports
         </Link>
       </header>
 

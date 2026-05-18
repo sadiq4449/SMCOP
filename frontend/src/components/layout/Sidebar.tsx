@@ -62,7 +62,8 @@ export function Sidebar({ user }: SidebarProps) {
 
       <div className="mt-auto border-t border-slate-100 px-5 py-4">
         <p className="text-[11px] leading-relaxed text-text-muted">
-          Tip: hover a menu item for a short description. Only pages relevant to your role are listed.
+          Brief descriptions appear when you pause on a menu item. Your account shows only the sections you are authorised to
+          use.
         </p>
       </div>
     </aside>

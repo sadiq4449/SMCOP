@@ -84,7 +84,7 @@ function formatAvgAggregateCell(v: unknown): string {
 
 const ROLE_QUICK_TIPS: Record<UserRole, string[]> = {
   super_admin: [
-    'Use Evaluator assignments so each Independent Evaluator only sees their schools.',
+    'Use Evaluator assignments so each Independent Evaluator only sees their roster.',
     'Process submitted reports under Reports before wider circulation.',
     'Keep Geography and Schools aligned so visits and exports stay accurate.',
   ],
@@ -578,8 +578,8 @@ export function DashboardPage() {
         <div className="animate-premium-in rounded-xl border border-amber-200/90 bg-amber-50/90 px-5 py-4 text-[14px] leading-relaxed text-amber-950">
           <p className="font-semibold text-amber-950">No schools assigned to you yet</p>
           <p className="mt-2 text-amber-950/95">
-            Ask your Super Admin to link schools to your account (they use{' '}
-            <span className="font-medium">Evaluator assignments</span> in the sidebar). Then open{' '}
+            Ask your programme administrator to link schools to your account (under{' '}
+            <span className="font-medium">Evaluator assignments</span>). Then open{' '}
             <Link className="font-semibold text-primary underline-offset-2 hover:underline" to="/dashboard/assigned-schools">
               Assigned schools
             </Link>{' '}
@@ -604,7 +604,7 @@ export function DashboardPage() {
             <Link className="font-semibold text-primary underline-offset-2 hover:underline" to="/dashboard/schools">
               Schools
             </Link>{' '}
-            to see what is in scope; ask a Super Admin if the list is empty.
+            to review coverage and contact your programme administrator if no institutions appear.
           </p>
         </div>
       ) : null}
@@ -798,7 +798,7 @@ export function DashboardPage() {
               <PremiumMetricCard
                 label="Pending draft visits"
                 value={String(districtDetail.pending_draft_visits ?? 0)}
-                hint="IE workload"
+                hint="Evaluator workload"
                 tone="warning"
                 iconLetter="P"
                 progress={null}
@@ -806,7 +806,7 @@ export function DashboardPage() {
               <PremiumMetricCard
                 label="Reports awaiting review"
                 value={String(districtDetail.pending_report_reviews ?? 0)}
-                hint="Super Admin approvals pipeline"
+                hint="Report approvals pipeline"
                 tone="warning"
                 iconLetter="R"
                 progress={null}

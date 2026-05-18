@@ -77,7 +77,7 @@ export function PartnerOrgsPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Partner organizations are managed by Super Admin only.</p>
+        <p className="text-text-secondary">Partner organizations are maintained by programme administrators.</p>
       </section>
     )
   }

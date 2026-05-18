@@ -13,7 +13,7 @@ export interface NavSection {
 }
 
 export const roleLabels: Record<UserRole, string> = {
-  super_admin: 'Super Admin',
+  super_admin: 'Programme administrator',
   government: 'PPP Node (Government)',
   ie: 'Independent Evaluator',
   partner: 'Partner organization',
@@ -22,7 +22,7 @@ export const roleLabels: Record<UserRole, string> = {
 const dash: NavItem = {
   label: 'Dashboard',
   path: '/dashboard',
-  hint: 'Summary KPIs and charts for your role',
+  hint: 'Quarterly indicators and summaries for your role',
 }
 
 const issues: NavItem = {
@@ -34,7 +34,7 @@ const issues: NavItem = {
 const schools: NavItem = {
   label: 'Schools',
   path: '/dashboard/schools',
-  hint: 'Directory: open a school for detail, attendance, and visits',
+  hint: 'School directory with profiles, attendance registers, and monitoring visits',
 }
 
 const districts: NavItem = {
@@ -46,7 +46,7 @@ const districts: NavItem = {
 const monitoring: NavItem = {
   label: 'Monitoring visits',
   path: '/dashboard/monitoring',
-  hint: 'Plan visits, drafts, and finalized monitoring forms',
+  hint: 'Schedule field visits and complete structured monitoring forms',
 }
 
 const calendar: NavItem = {
@@ -116,7 +116,7 @@ export function getNavigationSectionsForRole(role: UserRole): NavSection[] {
         },
         {
           title: 'Preferences',
-          items: [{ label: 'Settings', path: '/dashboard/settings', hint: 'Your profile and notifications' }],
+          items: [{ label: 'Settings', path: '/dashboard/settings', hint: 'Account profile and password' }],
         },
       ]
     case 'government':

@@ -165,7 +165,9 @@ export function IeSchoolAssignmentsPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Only Super Admin can assign schools to Independent Evaluators.</p>
+        <p className="text-text-secondary">
+          Only programme administrators may assign schools to Independent Evaluators.
+        </p>
       </section>
     )
   }
@@ -186,7 +188,7 @@ export function IeSchoolAssignmentsPage() {
             to="/dashboard/users"
             className="rounded-lg border border-muted-surface px-4 py-2 text-center text-sm font-semibold text-secondary hover:bg-muted-surface/40"
           >
-            ← All users
+            Back to all users
           </Link>
           <Link
             to="/dashboard/users/new"
@@ -215,7 +217,7 @@ export function IeSchoolAssignmentsPage() {
             disabled={loadingList}
             className="mt-2 w-full max-w-xl rounded-lg border border-muted-surface px-3 py-2 text-text-primary disabled:opacity-60"
           >
-            <option value="">{loadingList ? 'Loading…' : 'Select an IE…'}</option>
+            <option value="">{loadingList ? 'Loading…' : 'Choose an evaluator…'}</option>
             {ieUsers.map((u) => (
               <option key={u.id} value={u.id}>
                 {u.full_name} · {u.email} ({u.assigned_schools.length} schools)
@@ -235,7 +237,7 @@ export function IeSchoolAssignmentsPage() {
                 to={`/dashboard/users/${selectedIe.id}/edit#ie-schools`}
                 className="text-xs font-semibold text-secondary hover:text-primary"
               >
-                Open full profile editor →
+                Open full user profile
               </Link>
             </div>
 

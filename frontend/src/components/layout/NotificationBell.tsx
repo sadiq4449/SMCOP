@@ -212,7 +212,7 @@ export function NotificationBell() {
                 <span className="font-medium">{n.title}</span>
                 <span className="mt-0.5 block text-xs leading-relaxed text-text-secondary">{n.message}</span>
                 {hasLink ? (
-                  <span className="mt-1 block text-[11px] font-medium text-secondary">Open related page →</span>
+                  <span className="mt-1 block text-[11px] font-medium text-secondary">Open related page</span>
                 ) : null}
               </button>
             )

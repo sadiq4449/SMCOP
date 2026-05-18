@@ -88,7 +88,10 @@ export function VisitCalendarPage() {
   if (!user || !allowed) {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Visit calendar is available for PPP Node, partners, IE, and Super Admin.</p>
+        <p className="text-text-secondary">
+          The visit calendar is available to programme administrators, PPP Node users, partner organizations, and Independent
+          Evaluators.
+        </p>
       </section>
     )
   }
@@ -102,7 +105,7 @@ export function VisitCalendarPage() {
           <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Scheduling</p>
           <h1 className="mt-1 text-2xl font-semibold text-text-primary">Visit calendar</h1>
           <p className="mt-1 text-sm text-text-muted">
-            Planned inspection dates set by IE appear here; open a cell to complete the monitoring visit.
+            Planned inspection dates set by Independent Evaluators appear here; open a date to continue the monitoring visit.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

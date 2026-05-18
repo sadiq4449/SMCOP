@@ -122,7 +122,7 @@ export function GeographyPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">Geography is managed by Super Admin only.</p>
+        <p className="text-text-secondary">Geography records are maintained by programme administrators.</p>
       </section>
     )
   }

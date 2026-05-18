@@ -72,7 +72,7 @@ export function DistrictsBrowsePage() {
               .
             </>
           ) : (
-            <span> Geography changes are limited to Super Admin.</span>
+            <span> Geography changes are limited to programme administrators.</span>
           )}
         </p>
       </header>

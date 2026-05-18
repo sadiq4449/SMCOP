@@ -96,7 +96,7 @@ export function UsersListPage() {
   if (user?.role !== 'super_admin') {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
-        <p className="text-text-secondary">User administration is restricted to Super Admin.</p>
+        <p className="text-text-secondary">User administration is restricted to programme administrators.</p>
       </section>
     )
   }
@@ -116,7 +116,7 @@ export function UsersListPage() {
             to="/dashboard/ie-assignments"
             className="rounded-lg border border-muted-surface px-4 py-2 text-sm font-semibold text-secondary hover:bg-muted-surface/40"
           >
-            IE school assignments
+            Evaluator assignments
           </Link>
           <Link
             to="/dashboard/users/new"
@@ -236,7 +236,7 @@ export function UsersListPage() {
                   <td className="max-w-[220px] px-4 py-3 text-xs text-text-muted">
                     {[
                       u.role === 'government' ? (u.district_id ? 'District assigned' : 'PPP / national') : null,
-                      u.role === 'ie' ? `${u.assigned_schools.length} IE school(s)` : null,
+                      u.role === 'ie' ? `${u.assigned_schools.length} school(s) on roster` : null,
                       u.partner_org_id ? 'Partner org' : null,
                     ]
                       .filter(Boolean)

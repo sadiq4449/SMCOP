@@ -20,8 +20,13 @@ function infraStatusLabel(status: string): string {
 }
 
 function visitStatusLabel(status: unknown): string {
-  if (typeof status !== 'string') return '—'
-  return status.replace(/_/g, ' ')
+  if (typeof status !== 'string' || !status.trim()) return '—'
+  return status
+    .trim()
+    .split(/[\s_]+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+    .join(' ')
 }
 
 function KpiPerformanceBar({ score, maxScore }: { score: unknown; maxScore: unknown }) {
@@ -71,7 +76,7 @@ function RawSnapshotDetails({ snapshot }: { snapshot: Record<string, unknown> })
   return (
     <details className="rounded-lg border border-muted-surface bg-muted-surface/15">
       <summary className="cursor-pointer px-3 py-2 text-xs font-medium text-text-muted hover:bg-muted-surface/30 hover:text-text-secondary">
-        Raw snapshot (JSON) — technical / support only
+        Technical export (JSON) — ICT support only
       </summary>
       <pre className="max-h-44 overflow-auto border-t border-muted-surface p-3 font-mono text-[11px] leading-relaxed text-text-secondary">
         {JSON.stringify(snapshot, null, 2)}
@@ -84,8 +89,8 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
   if (!snapshot || Object.keys(snapshot).length === 0) {
     return (
       <div className="rounded-xl border border-dashed border-muted-surface bg-muted-surface/20 px-4 py-6 text-center text-sm text-text-muted">
-        No auto-generated snapshot on this report yet. Metrics appear when the system can tie this quarter to
-        monitoring and attendance data.
+        No automated summary is attached to this report yet. Figures will appear once monitoring and attendance records exist
+        for the quarter.
       </div>
     )
   }
@@ -99,7 +104,8 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
         <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 px-4 py-3 text-sm text-text-secondary">
           <p className="font-semibold text-amber-900">Visit data not linked for this quarter</p>
           <p className="mt-1 text-text-secondary">
-            {message ?? 'There is no finalized monitoring visit for this school and quarter, or data is still being recorded.'}
+            {message ??
+              'There is no completed monitoring visit on record for this school and quarter, or information is still being captured.'}
           </p>
         </div>
         <RawSnapshotDetails snapshot={snapshot} />
@@ -121,8 +127,8 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
 
   const overallHint =
     agg === '—' && kpiScores.length > 0
-      ? 'KPI scores exist but no weighted total yet — click Refresh metrics to sync from the visit.'
-      : 'Weighted average from the monitoring KPI rubric'
+      ? 'Indicator scores are recorded; select "Update summary from registers" on this report to refresh the consolidated score.'
+      : 'Consolidated score from the monitoring indicator framework'
 
   const obsCount =
     typeof snapshot.classroom_observation_count === 'number'
@@ -148,18 +154,20 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
   return (
     <div className="space-y-6">
       <div>
-        <h3 className="text-sm font-semibold text-text-primary">Quarter monitoring snapshot</h3>
+        <h3 className="text-sm font-semibold text-text-primary">Quarterly monitoring summary</h3>
         <p className="mt-1 text-xs text-text-muted">
-          Figures below are read-only and refreshed from the finalized visit and attendance registers for{' '}
-          <span className="font-medium text-text-secondary">{quarter}</span>. Independent Evaluators update registers under{' '}
-          <span className="font-medium text-text-secondary">Schools → school detail → Attendance registers</span>, then use{' '}
-          <span className="font-medium text-text-secondary">Refresh metrics</span> on this report.
+          The figures below are drawn from the approved monitoring visit and attendance registers for{' '}
+          <span className="font-medium text-text-secondary">{quarter}</span>. Independent Evaluators maintain registers under{' '}
+          <span className="font-medium text-text-secondary">Schools</span>, then open the school profile and{' '}
+          <span className="font-medium text-text-secondary">Attendance registers</span>. Authorised users may select{' '}
+          <span className="font-medium text-text-secondary">Update summary from registers</span> on this report to refresh these
+          values.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Overall visit score" value={agg === '—' ? 'Not scored' : agg} hint={overallHint} />
-        <MetricCard label="Classroom observations" value={obsCount} hint="Linked to this visit" />
+        <MetricCard label="Overall visit score" value={agg === '—' ? 'Pending' : agg} hint={overallHint} />
+        <MetricCard label="Classroom observations" value={obsCount} hint="From this monitoring visit" />
         <MetricCard label="Visit status" value={visitStatus} />
         <MetricCard label="Visit date" value={formatDate(visitDate)} />
       </div>
@@ -175,17 +183,17 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
 
       <section className="overflow-hidden rounded-xl border border-muted-surface bg-section/50">
         <div className="border-b border-muted-surface bg-muted-surface/30 px-4 py-2">
-          <h4 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Attendance in this quarter</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Attendance this quarter</h4>
           <p className="mt-0.5 text-xs text-text-muted">
             Period {periodStart} — {periodEnd}
           </p>
         </div>
         <div className="grid gap-px bg-muted-surface sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { k: 'Approved teacher attendance rows', v: teacherRows },
-            { k: 'Student daily register rows', v: studentEntries },
-            { k: 'Student boys present (sum)', v: boysSum },
-            { k: 'Student girls present (sum)', v: girlsSum },
+            { k: 'Teacher attendance (verified records)', v: teacherRows },
+            { k: 'Student daily attendance entries', v: studentEntries },
+            { k: 'Student attendance — boys (period total)', v: boysSum },
+            { k: 'Student attendance — girls (period total)', v: girlsSum },
           ].map((cell) => (
             <div key={cell.k} className="bg-surface px-4 py-3">
               <p className="text-[11px] font-medium uppercase tracking-wide text-text-muted">{cell.k}</p>
@@ -198,15 +206,16 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
       {kpiScores.length > 0 ? (
         <section className="overflow-hidden rounded-xl border border-muted-surface">
           <div className="border-b border-muted-surface bg-muted-surface/30 px-4 py-2">
-            <h4 className="text-xs font-semibold uppercase tracking-wide text-text-muted">KPI scores</h4>
+            <h4 className="text-xs font-semibold uppercase tracking-wide text-text-muted">Monitoring indicators</h4>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-muted-surface text-sm">
               <thead className="bg-section text-left text-xs uppercase text-text-muted">
                 <tr>
                   <th className="px-4 py-2">Indicator</th>
+                  <th className="px-4 py-2">Performance</th>
                   <th className="px-4 py-2">Score</th>
-                  <th className="px-4 py-2">Max</th>
+                  <th className="px-4 py-2">Scale</th>
                   <th className="px-4 py-2">Notes</th>
                 </tr>
               </thead>

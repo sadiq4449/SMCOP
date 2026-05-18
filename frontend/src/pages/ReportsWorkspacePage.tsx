@@ -297,7 +297,7 @@ export function ReportsWorkspacePage() {
       setSelected(updated)
       await reload()
     } catch (e: unknown) {
-      setError(getApiErrorMessage(e, 'Could not refresh metrics'))
+      setError(getApiErrorMessage(e, 'Could not update summary data'))
     } finally {
       setSaveBusy(false)
     }
@@ -319,10 +319,11 @@ export function ReportsWorkspacePage() {
             <p className="text-sm font-medium uppercase tracking-[0.18em] text-secondary">Reporting</p>
             <h1 className="mt-1 text-2xl font-semibold text-text-primary">Quarterly reports</h1>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-text-muted">
-              Super Admin assigns schools to Independent Evaluators (under Users → IE profile). IE completes KPI-aligned
-              monitoring visits, then drafts quarterly narrative here and submits for formal approval. Super Admin may edit or
-              resubmit content anytime; PPP Node and Partner Organization colleagues preview outcomes, download Excel/PDF
-              (PDF adds KPI charts), and attach threaded oversight notes only—they cannot alter IE narrative fields.
+              Quarterly reports combine structured monitoring results with narrative assessments for formal review.
+              Programme administrators align schools with Independent Evaluators; evaluators complete field visits and prepare
+              drafts for submission. Administrators may edit or return submissions as needed. PPP Node and partner
+              organizations review outcomes, export to Excel or PDF (PDF includes indicator charts), and add threaded oversight
+              notes. Narrative sections remain editable only where your role permits.
             </p>
           </div>
           {showCompareLinks ? (
@@ -330,29 +331,30 @@ export function ReportsWorkspacePage() {
               to="/dashboard/reports/compare"
               className="rounded-lg border border-muted-surface bg-surface px-4 py-2 text-sm font-semibold text-secondary shadow-sm hover:bg-muted-surface/40"
             >
-              Compare reports →
+              Compare reports
             </Link>
           ) : null}
         </div>
         <ol className="mt-4 grid gap-2 text-xs text-text-secondary sm:grid-cols-2 lg:grid-cols-4">
           <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
-            <span className="font-semibold text-primary">1.</span> Assign schools to IE (Super Admin).
+            <span className="font-semibold text-primary">1.</span> Administrators assign schools to Independent Evaluators.
           </li>
           <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
-            <span className="font-semibold text-primary">2.</span> IE finalizes visit & KPI evidence.
+            <span className="font-semibold text-primary">2.</span> Evaluators finalize visits and supporting evidence.
           </li>
           <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
-            <span className="font-semibold text-primary">3.</span> IE drafts report → Submit.
+            <span className="font-semibold text-primary">3.</span> Evaluators draft the report and submit for review.
           </li>
           <li className="rounded-lg border border-muted-surface bg-surface/80 px-3 py-2">
-            <span className="font-semibold text-primary">4.</span> Super Admin approves; Gov/Partner note & export.
+            <span className="font-semibold text-primary">4.</span> Administrators approve or request revisions; government and
+            partner reviewers add notes and exports.
           </li>
         </ol>
       </header>
 
       <div className="flex flex-wrap items-end gap-4">
         <label className="block max-w-xs text-sm">
-          <span className="mb-1 block font-medium text-text-secondary">List filter — quarter</span>
+          <span className="mb-1 block font-medium text-text-secondary">Quarter</span>
           <input
             value={quarter}
             onChange={(e) => setQuarter(e.target.value)}
@@ -365,10 +367,10 @@ export function ReportsWorkspacePage() {
       {canCreateDraft ? (
         <section className="rounded-2xl border border-muted-surface bg-surface p-4 shadow-sm">
           <h2 className="text-sm font-semibold text-text-primary">Create report</h2>
-          <p className="mt-1 text-xs text-text-muted">Requires access to the school (assigned schools or super admin).</p>
+          <p className="mt-1 text-xs text-text-muted">Requires access to the selected school (assigned roster or administrator rights).</p>
           <div className="mt-3 space-y-2">
             <label className="block text-xs font-medium text-text-secondary">
-              Find school (name or EMIS)
+              School name or EMIS code
               <input
                 value={schoolSearch}
                 onChange={(e) => setSchoolSearch(e.target.value)}
@@ -411,13 +413,13 @@ export function ReportsWorkspacePage() {
             >
               {createBusy ? 'Creating…' : 'Create draft'}
             </button>
-            <p className="text-xs text-text-muted">New-draft quarter matches the list filter until you edit it.</p>
+            <p className="text-xs text-text-muted">New reports use the quarter selected above until you change it.</p>
           </div>
         </section>
       ) : (
         <p className="rounded-2xl border border-muted-surface bg-surface px-4 py-3 text-sm text-text-muted">
-          New quarterly drafts are created by Independent Evaluators (or Super Admin). Use the list below to open reports in
-          your scope.
+          Independent Evaluators or programme administrators create new drafts. Select a report below to open one within your
+          scope.
         </p>
       )}
 
@@ -480,8 +482,18 @@ export function ReportsWorkspacePage() {
                   {schoolLabelById.get(selected.school_id) ?? shortenId(selected.school_id)}
                 </span>
               </h2>
-              <p className="mt-1 font-mono text-xs text-text-muted">ID {selected.school_id}</p>
               <p className="mt-1 text-sm capitalize text-text-muted">Status: {selected.status}</p>
+              <details className="mt-2 text-xs text-text-muted">
+                <summary className="cursor-pointer font-medium text-text-secondary hover:text-text-primary">
+                  Internal record identifiers
+                </summary>
+                <dl className="mt-2 space-y-1 border-t border-muted-surface pt-2 font-mono text-[11px] leading-relaxed">
+                  <div>
+                    <dt className="inline text-text-muted">School record </dt>
+                    <dd className="inline break-all text-text-secondary">{selected.school_id}</dd>
+                  </div>
+                </dl>
+              </details>
             </div>
             <div className="flex flex-wrap gap-2">
               {showCompareLinks ? (
@@ -499,7 +511,7 @@ export function ReportsWorkspacePage() {
                   onClick={() => void onRefreshSnapshot()}
                   className="rounded-lg border border-muted-surface px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-muted-surface/40 disabled:opacity-50"
                 >
-                  Refresh metrics
+                  Update summary from registers
                 </button>
               ) : null}
               <button
@@ -529,10 +541,10 @@ export function ReportsWorkspacePage() {
 
               {user.role === 'super_admin' && selected.status === 'submitted' ? (
                 <div className="rounded-xl border border-amber-400/30 bg-amber-400/5 p-4">
-                  <h3 className="text-sm font-semibold text-text-primary">Formal Super Admin decision</h3>
+                  <h3 className="text-sm font-semibold text-text-primary">Formal approval decision</h3>
                   <p className="mt-1 text-xs text-text-muted">
-                    Approve to lock the submission or reject to send narrative back for corrections (IE must revise while in
-                    draft after reopen).
+                    Approve to confirm the submission, or reject to request revisions from the evaluator (the report returns to
+                    draft for correction).
                   </p>
                   <label className="mt-3 block text-sm">
                     <span className="font-medium text-text-secondary">Decision remarks (optional)</span>
@@ -575,9 +587,9 @@ export function ReportsWorkspacePage() {
               ) : null}
 
               <div className="rounded-xl border border-muted-surface bg-section/40 p-4">
-                <h3 className="text-sm font-semibold text-text-primary">PPP Node & partner oversight notes</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Government and partner oversight notes</h3>
                 <p className="mt-1 text-xs text-text-muted">
-                  Threaded review comments only—does not change KPI narrative fields or substitute formal approval above.
+                  Review comments for traceability; they do not replace formal approval or change evaluator narrative fields.
                 </p>
                 <ul className="mt-3 space-y-2">
                   {comments.map((c) => (
@@ -603,7 +615,7 @@ export function ReportsWorkspacePage() {
                         onChange={(e) => setOversightNote(e.target.value)}
                         rows={3}
                         className="mt-1 w-full rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
-                        placeholder="Observations for Government / NGO partner reviewers…"
+                        placeholder="Comments visible to government and partner reviewers…"
                       />
                     </label>
                     <button
@@ -617,17 +629,17 @@ export function ReportsWorkspacePage() {
                   </div>
                 ) : (
                   <p className="mt-3 text-xs text-text-muted">
-                    Oversight notes are enabled for PPP Node (Government) and Partner Organization viewers with export
-                    access.
+                    Oversight notes are available to PPP Node (Government) and partner reviewers with export access.
                   </p>
                 )}
               </div>
 
               <div className="border-t border-muted-surface pt-4">
-                <h3 className="text-sm font-semibold text-text-primary">IE narrative & principal inputs</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Evaluator narrative and principal inputs</h3>
                 <p className="mt-1 text-xs text-text-muted">
-                  Super Admin may edit anytime; IE edits while status is draft. PPP Node / partners are view-only here—use
-                  oversight notes above. PDF exports include KPI bar charts from the snapshot.
+                  Programme administrators may edit at any time; Independent Evaluators edit while the report is in draft.
+                  Government and partner accounts view these sections here—use oversight notes for formal commentary. PDF exports
+                  include indicator charts from the summary above.
                 </p>
               </div>
 
@@ -681,7 +693,7 @@ export function ReportsWorkspacePage() {
                   onClick={() => void onSaveBody()}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
                 >
-                  Save fields
+                  Save narrative
                 </button>
                 {canSubmitDraft ? (
                   <button
@@ -690,7 +702,7 @@ export function ReportsWorkspacePage() {
                     onClick={() => void onSubmitForReview()}
                     className="rounded-lg bg-secondary px-4 py-2 text-sm font-semibold text-white hover:bg-primary disabled:opacity-50"
                   >
-                    Submit for Super Admin review
+                    Submit for administrator review
                   </button>
                 ) : null}
                 {user.role === 'super_admin' && selected.status === 'rejected' ? (

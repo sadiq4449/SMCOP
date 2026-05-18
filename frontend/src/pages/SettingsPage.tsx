@@ -45,7 +45,7 @@ export function SettingsPage() {
           </div>
           {user.district_id ? (
             <div className="sm:col-span-2">
-              <dt className="text-xs font-medium uppercase tracking-wide text-text-muted">District scope ID</dt>
+              <dt className="text-xs font-medium uppercase tracking-wide text-text-muted">District reference</dt>
               <dd className="mt-1 font-mono text-xs text-text-secondary">{user.district_id}</dd>
             </div>
           ) : null}

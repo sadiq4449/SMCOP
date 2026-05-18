@@ -814,7 +814,8 @@ export function VisitFormPage() {
             <section className="rounded-2xl border border-danger/30 bg-danger/5 p-6">
               <h2 className="text-lg font-semibold text-text-primary">Finalize</h2>
               <p className="mt-1 text-sm text-text-muted">
-                Requires visit date and all seven KPI scores saved. After finalize, only Super Admin can edit.
+                Requires visit date and all seven indicator scores saved. After finalization, only a programme administrator may
+                unlock edits.
               </p>
               <button
                 type="button"
