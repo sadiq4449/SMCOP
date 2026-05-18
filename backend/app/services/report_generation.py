@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session, selectinload
 from app.models.attendance import StudentDailyAttendance, TeacherAttendance, TeacherAttendanceApprovalStatus
 from app.models.geography import District, Taluka, UnionCouncil
 from app.models.monitoring import ClassroomObservation, KpiScore, Visit
+from app.services.visit_scoring import recompute_visit_aggregate
 from app.models.report import Report, ReportStatus
 from app.models.school import School
 
@@ -60,6 +61,9 @@ def build_snapshot(db: Session, *, school_id: UUID, quarter: str) -> tuple[dict,
             "visit_found": False,
             "message": "No visit recorded for this school and quarter yet.",
         }, None
+
+    recompute_visit_aggregate(db, visit.id)
+    db.refresh(visit)
 
     scores_out: list[dict] = []
     for s in sorted(visit.kpi_scores, key=lambda x: (x.kpi.sort_order if x.kpi else 99, str(x.kpi_id))):

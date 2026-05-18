@@ -406,6 +406,9 @@ def patch_visit(
         new_finalized = new_st == VFStatus.FINALIZED and old_status != VFStatus.FINALIZED
         visit.status = new_st
 
+    if new_finalized:
+        recompute_visit_aggregate(db, visit.id)
+
     if "infrastructure" in data and data["infrastructure"] is not None:
         db.execute(delete(InfrastructureChecklistItem).where(InfrastructureChecklistItem.visit_id == visit.id))
         for row in data["infrastructure"]:

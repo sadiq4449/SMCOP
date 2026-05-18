@@ -16,9 +16,25 @@ import {
   getDashboardSchool,
   getDashboardSystem,
 } from '../services/dashboardApi'
-import { getDistricts } from '../services/schoolsApi'
+import { getDistricts, getSchools } from '../services/schoolsApi'
 import type { UserRole } from '../types/auth'
-import type { District } from '../types/school'
+import type { District, SchoolSummary } from '../types/school'
+
+const PARTNER_DASH_SCHOOL_KEY = 'smocp_dash_partner_school:'
+
+/** Paginate until all rows are fetched (partner scope is capped server-side). */
+async function fetchAllScopedSchools(): Promise<SchoolSummary[]> {
+  const limit = 100
+  const out: SchoolSummary[] = []
+  let skip = 0
+  for (;;) {
+    const page = await getSchools({ skip, limit })
+    out.push(...page.items)
+    if (page.items.length < limit || out.length >= page.total) break
+    skip += limit
+  }
+  return out
+}
 
 function quarterNow() {
   const d = new Date()
@@ -84,7 +100,8 @@ const ROLE_QUICK_TIPS: Record<UserRole, string[]> = {
   ],
   partner: [
     'Browse Schools for institutions linked to your organization.',
-    'Review Observations and Reports for programme visibility and comparisons.',
+    'Use Monitoring visits and Observations for field visibility; Reports for exports and comparisons.',
+    'The dashboard snapshot uses the first school in your scoped list (by name); open a school for detail.',
   ],
 }
 
@@ -117,6 +134,9 @@ export function DashboardPage() {
   const [govDistrictId, setGovDistrictId] = useState('')
   /** Bumps after each successful load so score rings replay their entrance animation. */
   const [gaugeAnim, setGaugeAnim] = useState(0)
+  const [partnerSchools, setPartnerSchools] = useState<SchoolSummary[]>([])
+  const [partnerSchoolId, setPartnerSchoolId] = useState('')
+  const [partnerSchoolsLoading, setPartnerSchoolsLoading] = useState(false)
 
   const assigned = useMemo(() => user?.assigned_schools ?? [], [user?.assigned_schools])
   const primarySchoolId = assigned[0] ?? ''
@@ -150,6 +170,15 @@ export function DashboardPage() {
           setMain(s)
           setDistrictDetail(null)
         }
+      } else if (user.role === 'partner') {
+        if (!partnerSchoolId) {
+          setMain(null)
+          setDistrictDetail(null)
+        } else {
+          const s = await getDashboardSchool(partnerSchoolId, { quarter: q })
+          setMain(s)
+          setDistrictDetail(null)
+        }
       } else {
         setMain(null)
         setDistrictDetail(null)
@@ -162,7 +191,41 @@ export function DashboardPage() {
       setLoading(false)
       setGaugeAnim((n) => n + 1)
     }
-  }, [user, quarter, govDistrictId, primarySchoolId])
+  }, [user, quarter, govDistrictId, primarySchoolId, partnerSchoolId])
+
+  useEffect(() => {
+    if (!user || user.role !== 'partner') {
+      setPartnerSchools([])
+      setPartnerSchoolId('')
+      setPartnerSchoolsLoading(false)
+      return
+    }
+    let cancelled = false
+    setPartnerSchoolsLoading(true)
+    void (async () => {
+      try {
+        const items = await fetchAllScopedSchools()
+        if (cancelled) return
+        setPartnerSchools(items)
+        const key = `${PARTNER_DASH_SCHOOL_KEY}${user.id}`
+        const stored = sessionStorage.getItem(key)
+        const nextId =
+          stored && items.some((s) => s.id === stored) ? stored : (items[0]?.id ?? '')
+        setPartnerSchoolId(nextId)
+        if (nextId) sessionStorage.setItem(key, nextId)
+      } catch {
+        if (!cancelled) {
+          setPartnerSchools([])
+          setPartnerSchoolId('')
+        }
+      } finally {
+        if (!cancelled) setPartnerSchoolsLoading(false)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   useEffect(() => {
     void reload()
@@ -398,7 +461,9 @@ export function DashboardPage() {
     : 1
 
   const schoolDash =
-    main && typeof main.school_id === 'string' && user.role === 'ie'
+    main &&
+    typeof main.school_id === 'string' &&
+    (user.role === 'ie' || user.role === 'partner')
 
   const execSummary =
     totals != null
@@ -406,7 +471,7 @@ export function DashboardPage() {
       : districtDetail != null
         ? `District command view for ${formatGeographicDisplayName(String(districtDetail.district_name ?? 'selected geography'))} — monitor drafts, report reviews, and facility signals before they escalate.`
         : schoolDash
-          ? `School operational picture for ${String(main?.school_name ?? 'your assigned school')} — enrollment momentum, attendance compliance, and visit quality in one place.`
+          ? `School operational picture for ${String(main?.school_name ?? (user.role === 'partner' ? 'your organization’s schools' : 'your assigned school'))} — enrollment momentum, attendance compliance, and visit quality in one place.`
           : `Quarter-scoped intelligence for ${roleLabels[user.role]}. Metrics align with finalized visits and attendance registers.`
 
   return (
@@ -450,9 +515,35 @@ export function DashboardPage() {
                 </select>
               </label>
             ) : null}
+            {user.role === 'partner' && partnerSchools.length > 0 ? (
+              <label className="block min-w-[220px] flex-1">
+                <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                  School
+                </span>
+                <select
+                  value={partnerSchoolId}
+                  onChange={(e) => {
+                    const id = e.target.value
+                    setPartnerSchoolId(id)
+                    if (user?.id && id) {
+                      sessionStorage.setItem(`${PARTNER_DASH_SCHOOL_KEY}${user.id}`, id)
+                    }
+                  }}
+                  className="w-full !text-[13px]"
+                  disabled={partnerSchoolsLoading}
+                >
+                  {partnerSchools.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                      {s.emis_code ? ` · ${s.emis_code}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
             <button
               type="button"
-              disabled={loading}
+              disabled={loading || (user.role === 'partner' && partnerSchoolsLoading)}
               onClick={() => void reload()}
               className="rounded-xl border border-slate-200/90 bg-slate-900/[0.04] px-5 py-2.5 text-[13px] font-medium text-text-primary transition-colors duration-200 hover:bg-slate-900/[0.07] disabled:opacity-45"
             >
@@ -473,8 +564,12 @@ export function DashboardPage() {
         </div>
       ) : null}
 
-      {loading ? (
-        <p className="animate-premium-in pl-1 text-sm font-medium text-text-muted">Loading your dashboard…</p>
+      {loading || (user.role === 'partner' && partnerSchoolsLoading) ? (
+        <p className="animate-premium-in pl-1 text-sm font-medium text-text-muted">
+          {user.role === 'partner' && partnerSchoolsLoading && !loading
+            ? 'Loading your school list…'
+            : 'Loading your dashboard…'}
+        </p>
       ) : null}
 
       {!loading &&
@@ -493,6 +588,23 @@ export function DashboardPage() {
               Schools
             </Link>{' '}
             to begin visits and data entry.
+          </p>
+        </div>
+      ) : null}
+
+      {!loading &&
+      !partnerSchoolsLoading &&
+      user.role === 'partner' &&
+      partnerSchools.length === 0 ? (
+        <div className="animate-premium-in rounded-xl border border-amber-200/90 bg-amber-50/90 px-5 py-4 text-[14px] leading-relaxed text-amber-950">
+          <p className="font-semibold text-amber-950">No school metrics to show yet</p>
+          <p className="mt-2 text-amber-950/95">
+            This dashboard needs at least one school linked to your partner organization (and your account must have that
+            organization assigned). Open{' '}
+            <Link className="font-semibold text-primary underline-offset-2 hover:underline" to="/dashboard/schools">
+              Schools
+            </Link>{' '}
+            to see what is in scope; ask a Super Admin if the list is empty.
           </p>
         </div>
       ) : null}

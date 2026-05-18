@@ -115,6 +115,15 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
   const aggNum = typeof aggRaw === 'number' ? aggRaw : typeof aggRaw === 'string' ? Number(aggRaw) : NaN
   const agg =
     aggRaw != null && aggRaw !== '' && Number.isFinite(aggNum) ? `${aggNum.toFixed(aggNum % 1 === 0 ? 0 : 1)}%` : '—'
+
+  const kpiScores = Array.isArray(snapshot.kpi_scores) ? snapshot.kpi_scores : []
+  const infraRows = Array.isArray(snapshot.infrastructure_checklist) ? snapshot.infrastructure_checklist : []
+
+  const overallHint =
+    agg === '—' && kpiScores.length > 0
+      ? 'KPI scores exist but no weighted total yet — click Refresh metrics to sync from the visit.'
+      : 'Weighted average from the monitoring KPI rubric'
+
   const obsCount =
     typeof snapshot.classroom_observation_count === 'number'
       ? String(snapshot.classroom_observation_count)
@@ -136,9 +145,6 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
   const girlsSum =
     typeof attendance?.student_girls_present_sum === 'number' ? String(attendance.student_girls_present_sum) : '—'
 
-  const kpiScores = Array.isArray(snapshot.kpi_scores) ? snapshot.kpi_scores : []
-  const infraRows = Array.isArray(snapshot.infrastructure_checklist) ? snapshot.infrastructure_checklist : []
-
   return (
     <div className="space-y-6">
       <div>
@@ -152,7 +158,7 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label="Overall visit score" value={agg === '—' ? 'Not scored' : agg} hint="From monitoring KPIs" />
+        <MetricCard label="Overall visit score" value={agg === '—' ? 'Not scored' : agg} hint={overallHint} />
         <MetricCard label="Classroom observations" value={obsCount} hint="Linked to this visit" />
         <MetricCard label="Visit status" value={visitStatus} />
         <MetricCard label="Visit date" value={formatDate(visitDate)} />

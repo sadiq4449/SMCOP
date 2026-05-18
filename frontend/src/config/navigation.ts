@@ -112,7 +112,7 @@ export function getNavigationSectionsForRole(role: UserRole): NavSection[] {
         },
         {
           title: 'Visits & reporting',
-          items: [calendar, reports, compare],
+          items: [monitoring, calendar, reports, compare],
         },
         {
           title: 'Preferences',
@@ -143,7 +143,7 @@ export function getNavigationSectionsForRole(role: UserRole): NavSection[] {
         { title: 'Overview', items: [dash] },
         { title: 'Work queue', items: [issues] },
         { title: 'Schools', items: [schools] },
-        { title: 'Field monitoring', items: [calendar, observations] },
+        { title: 'Field monitoring', items: [monitoring, calendar, observations] },
         { title: 'Reports', items: [reports, compare] },
       ]
     default:
