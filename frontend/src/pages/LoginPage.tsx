@@ -5,8 +5,8 @@ import { useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
   const { isAuthenticated, isLoading, login } = useAuth()
-  const [email, setEmail] = useState('superadmin@example.com')
-  const [password, setPassword] = useState('Password123!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -38,7 +38,8 @@ export function LoginPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-text-muted">SMOCP Portal</p>
           <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary">Sign in</h1>
           <p className="mt-3 text-[15px] leading-relaxed text-text-secondary">
-            Secure access to national school monitoring and reporting.
+            Sign in with the email your administrator invited. After login, use the left menu for schools, visits, and
+            reports.
           </p>
         </div>
 
@@ -50,6 +51,8 @@ export function LoginPage() {
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               className="w-full !py-3"
+              placeholder="you@organization.gov.pk"
+              autoComplete="email"
               required
             />
           </label>
@@ -61,6 +64,8 @@ export function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               className="w-full !py-3"
+              placeholder="Enter your password"
+              autoComplete="current-password"
               required
             />
           </label>
@@ -86,10 +91,10 @@ export function LoginPage() {
           </Link>
         </p>
 
-        <div className="mt-8 rounded-xl border border-slate-200/80 bg-slate-50/80 p-4 text-center text-[13px] leading-relaxed text-text-muted">
-          Demo: <span className="font-mono text-text-secondary">superadmin@example.com</span> /{' '}
-          <span className="font-mono text-text-secondary">Password123!</span>
-        </div>
+        <p className="mt-6 text-center text-[13px] leading-relaxed text-text-muted">
+          Need an account or locked out? Contact your programme <span className="text-text-secondary">Super Admin</span>{' '}
+          or IT contact.
+        </p>
       </div>
     </div>
   )

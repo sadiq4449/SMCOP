@@ -17,6 +17,7 @@ import {
   getDashboardSystem,
 } from '../services/dashboardApi'
 import { getDistricts } from '../services/schoolsApi'
+import type { UserRole } from '../types/auth'
 import type { District } from '../types/school'
 
 function quarterNow() {
@@ -63,6 +64,46 @@ function formatAvgAggregateCell(v: unknown): string {
   const n = Number(v)
   if (!Number.isFinite(n)) return '—'
   return n.toFixed(2)
+}
+
+const ROLE_QUICK_TIPS: Record<UserRole, string[]> = {
+  super_admin: [
+    'Use Evaluator assignments so each Independent Evaluator only sees their schools.',
+    'Process submitted reports under Reports before wider circulation.',
+    'Keep Geography and Schools aligned so visits and exports stay accurate.',
+  ],
+  government: [
+    'Optional: choose a district above to load district drill-down below the national totals.',
+    'Record monitoring under Monitoring visits; use Visit calendar for planning.',
+    'Export evidence from Reports when you need spreadsheets or packaged outputs.',
+  ],
+  ie: [
+    'Open Assigned schools (or Schools) to reach institutions on your roster.',
+    'Draft and finalize visits under Monitoring visits.',
+    'Enter attendance and rosters from each school’s detail page.',
+  ],
+  partner: [
+    'Browse Schools for institutions linked to your organization.',
+    'Review Observations and Reports for programme visibility and comparisons.',
+  ],
+}
+
+function RoleQuickTips({ role }: { role: UserRole }) {
+  const tips = ROLE_QUICK_TIPS[role]
+  return (
+    <PremiumPanel className="animate-premium-in border-sky-200/55 bg-gradient-to-br from-sky-50/50 to-white/80">
+      <PremiumEyebrow>Getting around</PremiumEyebrow>
+      <h2 className="mt-2 text-lg font-semibold tracking-tight text-text-primary">Quick tips for your role</h2>
+      <ul className="mt-4 space-y-2.5 text-[14px] leading-relaxed text-text-secondary">
+        {tips.map((t) => (
+          <li key={t} className="flex gap-2">
+            <span className="mt-2 size-1 shrink-0 rounded-full bg-sky-500/80" aria-hidden />
+            <span>{t}</span>
+          </li>
+        ))}
+      </ul>
+    </PremiumPanel>
+  )
 }
 
 export function DashboardPage() {
@@ -373,10 +414,11 @@ export function DashboardPage() {
       <PremiumPanel>
         <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 max-w-3xl animate-premium-in">
-            <PremiumEyebrow>Monitoring intelligence</PremiumEyebrow>
+            <PremiumEyebrow>Home</PremiumEyebrow>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-text-primary sm:text-[2rem] sm:leading-tight">
-              {roleLabels[user.role]}
+              Dashboard
             </h1>
+            <p className="mt-2 text-[13px] font-semibold text-text-secondary">{roleLabels[user.role]}</p>
             <p className="mt-4 text-[15px] leading-relaxed text-text-secondary">{execSummary}</p>
           </div>
           <div className="flex flex-wrap items-end gap-4 animate-premium-in" style={{ animationDelay: '60ms' }}>
@@ -420,6 +462,8 @@ export function DashboardPage() {
         </div>
       </PremiumPanel>
 
+      <RoleQuickTips role={user.role} />
+
       {error ? (
         <div
           className="animate-premium-in rounded-xl border border-rose-200/80 bg-rose-50/90 px-5 py-4 text-sm text-rose-900"
@@ -430,15 +474,26 @@ export function DashboardPage() {
       ) : null}
 
       {loading ? (
-        <p className="animate-premium-in pl-1 text-sm font-medium text-text-muted">Loading operational metrics…</p>
+        <p className="animate-premium-in pl-1 text-sm font-medium text-text-muted">Loading your dashboard…</p>
       ) : null}
 
       {!loading &&
       (user.role === 'ie') &&
       !primarySchoolId ? (
-        <div className="animate-premium-in rounded-xl border border-amber-200/90 bg-amber-50/90 px-5 py-4 text-sm text-amber-950">
-          No assigned school on your account yet. Ask a Super Admin to assign{' '}
-          <span className="font-mono text-[13px]">assigned_schools</span>.
+        <div className="animate-premium-in rounded-xl border border-amber-200/90 bg-amber-50/90 px-5 py-4 text-[14px] leading-relaxed text-amber-950">
+          <p className="font-semibold text-amber-950">No schools assigned to you yet</p>
+          <p className="mt-2 text-amber-950/95">
+            Ask your Super Admin to link schools to your account (they use{' '}
+            <span className="font-medium">Evaluator assignments</span> in the sidebar). Then open{' '}
+            <Link className="font-semibold text-primary underline-offset-2 hover:underline" to="/dashboard/assigned-schools">
+              Assigned schools
+            </Link>{' '}
+            or{' '}
+            <Link className="font-semibold text-primary underline-offset-2 hover:underline" to="/dashboard/schools">
+              Schools
+            </Link>{' '}
+            to begin visits and data entry.
+          </p>
         </div>
       ) : null}
 

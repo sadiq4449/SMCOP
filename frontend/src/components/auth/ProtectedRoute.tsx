@@ -8,7 +8,7 @@ export function ProtectedRoute() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-text-muted">
-        <p className="animate-premium-in text-sm font-medium tracking-tight">Loading portal…</p>
+        <p className="animate-premium-in text-sm font-medium tracking-tight">Opening your workspace…</p>
       </div>
     )
   }
