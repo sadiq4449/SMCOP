@@ -7,11 +7,27 @@ import logging
 from io import BytesIO
 
 from fpdf import FPDF
+from fpdf.enums import XPos, YPos
 from openpyxl import Workbook
 
 from app.models.report import Report
 
 _logger = logging.getLogger(__name__)
+
+
+def _snapshot_as_dict(raw: object | None) -> dict:
+    """Coerce JSON column values that may arrive as dict or serialized string."""
+    if raw is None:
+        return {}
+    if isinstance(raw, dict):
+        return raw
+    if isinstance(raw, str) and raw.strip():
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            return {}
+        return parsed if isinstance(parsed, dict) else {}
+    return {}
 
 
 def _pdf_safe(text: str) -> str:
@@ -32,13 +48,21 @@ def _append_kpi_chart_pdf(pdf: FPDF, snap: object) -> None:
         return
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 13)
-    pdf.multi_cell(0, 8, _pdf_safe("KPI performance chart"))
+    pdf.multi_cell(
+        0,
+        8,
+        _pdf_safe("KPI performance chart"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.ln(1)
     pdf.set_font("Helvetica", size=9)
     pdf.multi_cell(
         0,
         5,
         _pdf_safe("Bars show score achieved versus maximum for each indicator (from the report snapshot)."),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
     )
     pdf.ln(3)
 
@@ -97,13 +121,13 @@ def report_to_xlsx(report: Report) -> bytes:
     ws.append(["Principal daily activity notes", report.principal_daily_activity_notes or ""])
     ws.append([])
 
-    snap = report.generated_snapshot or {}
+    snap = _snapshot_as_dict(report.generated_snapshot)
     ws.append(["Generated snapshot (JSON)"])
     ws.append([json.dumps(snap, indent=2)])
 
     ws2 = wb.create_sheet("KPI rows")
     ws2.append(["kpi_name", "score", "max_score", "pct_of_max"])
-    scores = snap.get("kpi_scores") if isinstance(snap, dict) else None
+    scores = snap.get("kpi_scores")
     if isinstance(scores, list):
         for row in scores:
             if isinstance(row, dict):
@@ -132,33 +156,75 @@ def report_to_pdf(report: Report) -> bytes:
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Helvetica", "B", 14)
-    pdf.multi_cell(0, 8, _pdf_safe(f"Quarterly report — {report.quarter}"))
+    pdf.multi_cell(
+        0,
+        8,
+        _pdf_safe(f"Quarterly report — {report.quarter}"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.ln(4)
     pdf.set_font("Helvetica", size=11)
-    pdf.multi_cell(0, 6, _pdf_safe(f"School ID: {report.school_id}"))
-    pdf.multi_cell(0, 6, _pdf_safe(f"Status: {report.status.value}"))
+    pdf.multi_cell(
+        0,
+        6,
+        _pdf_safe(f"School ID: {report.school_id}"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
+    pdf.multi_cell(
+        0,
+        6,
+        _pdf_safe(f"Status: {report.status.value}"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.ln(2)
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 8, "Summary")
     pdf.ln()
     pdf.set_font("Helvetica", size=11)
-    pdf.multi_cell(0, 6, _pdf_safe(report.summary or "(none)"))
+    pdf.multi_cell(
+        0,
+        6,
+        _pdf_safe(report.summary or "(none)"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.ln(2)
     pdf.set_font("Helvetica", "B", 12)
     pdf.cell(0, 8, "Recommendations")
     pdf.ln()
     pdf.set_font("Helvetica", size=11)
-    pdf.multi_cell(0, 6, _pdf_safe(report.recommendations or "(none)"))
+    pdf.multi_cell(
+        0,
+        6,
+        _pdf_safe(report.recommendations or "(none)"),
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.ln(2)
 
-    snap = report.generated_snapshot or {}
-    if isinstance(snap, dict) and snap.get("visit_found"):
+    snap = _snapshot_as_dict(report.generated_snapshot)
+    if snap.get("visit_found"):
         pdf.set_font("Helvetica", "B", 12)
         pdf.cell(0, 8, "Auto-generated metrics")
         pdf.ln()
         pdf.set_font("Helvetica", size=11)
-        pdf.multi_cell(0, 6, _pdf_safe(f"Aggregate score: {snap.get('aggregate_score')}"))
-        pdf.multi_cell(0, 6, _pdf_safe(f"Classroom observations: {snap.get('classroom_observation_count')}"))
+        pdf.multi_cell(
+            0,
+            6,
+            _pdf_safe(f"Aggregate score: {snap.get('aggregate_score')}"),
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
+        pdf.multi_cell(
+            0,
+            6,
+            _pdf_safe(f"Classroom observations: {snap.get('classroom_observation_count')}"),
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
         att = snap.get("attendance") if isinstance(snap.get("attendance"), dict) else {}
         pdf.multi_cell(
             0,
@@ -168,6 +234,8 @@ def report_to_pdf(report: Report) -> bytes:
                 f"(approved teacher rows: {att.get('approved_teacher_attendance_rows')}, "
                 f"student daily rows: {att.get('student_daily_entries')})"
             ),
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
         )
 
     try:

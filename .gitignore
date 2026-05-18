@@ -29,6 +29,9 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 .idea/
+.agents/
+.cursor/
+skills-lock.json
 
 # Local DB artifacts
 *.db
