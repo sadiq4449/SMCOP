@@ -96,9 +96,12 @@ export function NotificationBell() {
   }, [open, updatePanelPosition])
 
   useEffect(() => {
-    void refreshCount()
+    const tid = window.setTimeout(() => void refreshCount(), 500)
     const t = window.setInterval(() => void refreshCount(), 60000)
-    return () => window.clearInterval(t)
+    return () => {
+      window.clearTimeout(tid)
+      window.clearInterval(t)
+    }
   }, [refreshCount])
 
   useEffect(() => {

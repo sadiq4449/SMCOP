@@ -80,16 +80,6 @@ export function DashboardPage() {
   const assigned = useMemo(() => user?.assigned_schools ?? [], [user?.assigned_schools])
   const primarySchoolId = assigned[0] ?? ''
 
-  useEffect(() => {
-    if (user?.role !== 'government') return
-    void getDistricts()
-      .then((d) => {
-        setDistricts(d)
-        setGovDistrictId((prev) => prev || d[0]?.id || '')
-      })
-      .catch(() => {})
-  }, [user?.role])
-
   const reload = useCallback(async () => {
     if (!user) return
     setLoading(true)
@@ -101,14 +91,15 @@ export function DashboardPage() {
         setMain(d)
         setDistrictDetail(null)
       } else if (user.role === 'government') {
-        const d = await getDashboardGovernment({ quarter: q, district_limit: 25 })
-        setMain(d)
-        if (govDistrictId.trim()) {
-          const dist = await getDashboardDistrict({ quarter: q, district_id: govDistrictId.trim() })
-          setDistrictDetail(dist)
-        } else {
-          setDistrictDetail(null)
-        }
+        const detailId = govDistrictId.trim()
+        const [districtList, govMain, distRaw] = await Promise.all([
+          getDistricts().catch(() => [] as District[]),
+          getDashboardGovernment({ quarter: q, district_limit: 25 }),
+          detailId ? getDashboardDistrict({ quarter: q, district_id: detailId }) : Promise.resolve(null),
+        ])
+        setDistricts(districtList)
+        setMain(govMain)
+        setDistrictDetail(distRaw && typeof distRaw === 'object' ? (distRaw as Record<string, unknown>) : null)
       } else if (user.role === 'ie') {
         if (!primarySchoolId) {
           setMain(null)
@@ -340,8 +331,6 @@ export function DashboardPage() {
     main && typeof main.totals === 'object' && main.totals !== null ? (main.totals as Record<string, unknown>) : null
   const districtRows =
     main && Array.isArray(main.districts) ? (main.districts as Record<string, unknown>[]) : null
-  const heatmap =
-    main && typeof main.heatmap === 'object' && main.heatmap !== null ? (main.heatmap as Record<string, unknown>) : null
   const issues =
     main && typeof main.issues === 'object' && main.issues !== null ? (main.issues as Record<string, unknown>) : null
 
@@ -537,13 +526,6 @@ export function DashboardPage() {
               <p className="mt-1 text-2xl font-semibold tabular-nums text-text-primary">{String(issues.open_count ?? 0)}</p>
             </div>
           </div>
-        </PremiumPanel>
-      ) : null}
-
-      {heatmap && user.role === 'super_admin' ? (
-        <PremiumPanel className="animate-premium-in">
-          <PremiumEyebrow>Geographic coverage</PremiumEyebrow>
-          <p className="mt-3 text-sm leading-relaxed text-text-secondary">{String(heatmap.message ?? '—')}</p>
         </PremiumPanel>
       ) : null}
 

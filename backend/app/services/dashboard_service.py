@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime, timedelta, timezone
 from uuid import UUID
 
-from sqlalchemy import Float, and_, cast, func, select
+from sqlalchemy import Float, and_, case, cast, func, select
 from sqlalchemy.orm import Session
 
 from app.models.attendance import StudentDailyAttendance, TeacherAttendance, TeacherAttendanceApprovalStatus
@@ -71,11 +71,6 @@ def system_dashboard_payload(
             "overall_avg_aggregate_score": float(avg_all) if avg_all is not None else None,
         },
         "districts": district_rows,
-        "heatmap": {
-            "enabled": False,
-            "message": "Regional heatmap will use visit GPS buckets in a future release.",
-            "cells": [],
-        },
     }
 
 
@@ -98,50 +93,66 @@ def government_dashboard_payload(
 
 
 def _district_breakdown_page(db: Session, *, quarter: str, skip: int, limit: int) -> list[dict]:
+    """Aggregate per district with a bounded number of queries (no per-district round trips)."""
     q_norm = normalize_quarter(quarter)
     districts = db.scalars(select(District).order_by(District.name.asc()).offset(skip).limit(limit)).all()
+    if not districts:
+        return []
+
+    district_ids = [d.id for d in districts]
+
+    sch_rows = db.execute(
+        select(Taluka.district_id, func.count(School.id))
+        .select_from(School)
+        .join(UnionCouncil, School.uc_id == UnionCouncil.id)
+        .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
+        .where(Taluka.district_id.in_(district_ids))
+        .group_by(Taluka.district_id),
+    ).all()
+    school_map: dict[UUID, int] = {row[0]: int(row[1]) for row in sch_rows}
+
+    visit_rows = db.execute(
+        select(
+            Taluka.district_id,
+            func.count(Visit.id).label("visits"),
+            func.sum(case((Visit.status == VisitFormStatus.FINALIZED, 1), else_=0)).label("fin_cnt"),
+            func.avg(
+                case(
+                    (
+                        and_(
+                            Visit.status == VisitFormStatus.FINALIZED,
+                            Visit.aggregate_score.is_not(None),
+                        ),
+                        cast(Visit.aggregate_score, Float),
+                    ),
+                    else_=None,
+                ),
+            ).label("avg_sc"),
+        )
+        .select_from(Visit)
+        .join(School, Visit.school_id == School.id)
+        .join(UnionCouncil, School.uc_id == UnionCouncil.id)
+        .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
+        .where(Visit.quarter == q_norm, Taluka.district_id.in_(district_ids))
+        .group_by(Taluka.district_id),
+    ).all()
+    visit_map: dict[UUID, tuple[int, int, float | None]] = {}
+    for row in visit_rows:
+        did = row[0]
+        v_cnt = int(row[1] or 0)
+        f_cnt = int(row[2] or 0)
+        avg_raw = row[3]
+        avg_sc = float(avg_raw) if avg_raw is not None else None
+        visit_map[did] = (v_cnt, f_cnt, avg_sc)
 
     out: list[dict] = []
     for d in districts:
-        school_cnt = db.scalar(
-            select(func.count(School.id))
-            .join(UnionCouncil, School.uc_id == UnionCouncil.id)
-            .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
-            .where(Taluka.district_id == d.id),
-        ) or 0
-
-        visit_cnt = db.scalar(
-            select(func.count(Visit.id))
-            .join(School, Visit.school_id == School.id)
-            .join(UnionCouncil, School.uc_id == UnionCouncil.id)
-            .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
-            .where(Taluka.district_id == d.id, Visit.quarter == q_norm),
-        ) or 0
-
-        fin_cnt = db.scalar(
-            select(func.count(Visit.id))
-            .join(School, Visit.school_id == School.id)
-            .join(UnionCouncil, School.uc_id == UnionCouncil.id)
-            .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
-            .where(
-                Taluka.district_id == d.id,
-                Visit.quarter == q_norm,
-                Visit.status == VisitFormStatus.FINALIZED,
-            ),
-        ) or 0
-
-        avg_sc = db.scalar(
-            select(func.avg(cast(Visit.aggregate_score, Float)))
-            .join(School, Visit.school_id == School.id)
-            .join(UnionCouncil, School.uc_id == UnionCouncil.id)
-            .join(Taluka, UnionCouncil.taluka_id == Taluka.id)
-            .where(
-                Taluka.district_id == d.id,
-                Visit.quarter == q_norm,
-                Visit.status == VisitFormStatus.FINALIZED,
-                Visit.aggregate_score.is_not(None),
-            ),
-        )
+        school_cnt = school_map.get(d.id, 0)
+        v_fin_avg = visit_map.get(d.id)
+        if v_fin_avg:
+            visit_cnt, fin_cnt, avg_sc = v_fin_avg
+        else:
+            visit_cnt, fin_cnt, avg_sc = 0, 0, None
 
         ratio = (float(fin_cnt) / float(visit_cnt)) if visit_cnt else None
         out.append(
@@ -153,7 +164,7 @@ def _district_breakdown_page(db: Session, *, quarter: str, skip: int, limit: int
                 "visits": int(visit_cnt),
                 "visits_finalized": int(fin_cnt),
                 "finalized_ratio": round(ratio, 4) if ratio is not None else None,
-                "avg_aggregate_score": round(float(avg_sc), 4) if avg_sc is not None else None,
+                "avg_aggregate_score": round(avg_sc, 4) if avg_sc is not None else None,
             },
         )
     return out
@@ -233,19 +244,43 @@ def district_operational_payload(
     ).all()
 
     school_cards: list[dict] = []
-    for sch in schools_page:
-        vis = db.scalar(
-            select(Visit).where(Visit.school_id == sch.id, Visit.quarter == q),
-        )
-        rep = db.scalar(select(Report).where(Report.school_id == sch.id, Report.quarter == q))
-        gap_count = 0
-        if vis:
-            gap_count = db.scalar(
-                select(func.count()).where(
-                    InfrastructureChecklistItem.visit_id == vis.id,
+    school_ids = [sch.id for sch in schools_page]
+    visit_by_school: dict[UUID, Visit] = {}
+    report_by_school: dict[UUID, Report] = {}
+    gap_by_school: dict[UUID, int] = {}
+
+    if school_ids:
+        visits_batch = db.scalars(select(Visit).where(Visit.school_id.in_(school_ids), Visit.quarter == q)).all()
+        for v in visits_batch:
+            sid = v.school_id
+            prev = visit_by_school.get(sid)
+            if prev is None or v.id > prev.id:
+                visit_by_school[sid] = v
+
+        reports_batch = db.scalars(select(Report).where(Report.school_id.in_(school_ids), Report.quarter == q)).all()
+        for r in reports_batch:
+            sid = r.school_id
+            prev = report_by_school.get(sid)
+            if prev is None or r.id > prev.id:
+                report_by_school[sid] = r
+
+        visit_ids = [v.id for v in visit_by_school.values()]
+        if visit_ids:
+            gap_rows = db.execute(
+                select(Visit.school_id, func.count(InfrastructureChecklistItem.id))
+                .join(InfrastructureChecklistItem, InfrastructureChecklistItem.visit_id == Visit.id)
+                .where(
+                    Visit.id.in_(visit_ids),
                     InfrastructureChecklistItem.status != InfrastructureItemStatus.AVAILABLE,
-                ),
-            ) or 0
+                )
+                .group_by(Visit.school_id),
+            ).all()
+            gap_by_school = {row[0]: int(row[1]) for row in gap_rows}
+
+    for sch in schools_page:
+        vis = visit_by_school.get(sch.id)
+        rep = report_by_school.get(sch.id)
+        gap_count = gap_by_school.get(sch.id, 0) if vis else 0
         school_cards.append(
             {
                 "school_id": str(sch.id),
@@ -315,21 +350,18 @@ def school_dashboard_payload(db: Session, *, school_id: UUID, quarter: str | Non
     ]
 
     start_d, end_d = quarter_date_bounds(q)
-    teacher_rows = db.scalar(
-        select(func.count(TeacherAttendance.id)).where(
+    teacher_stats = db.execute(
+        select(
+            func.count(TeacherAttendance.id),
+            func.sum(case((TeacherAttendance.approval_status == TeacherAttendanceApprovalStatus.APPROVED, 1), else_=0)),
+        ).where(
             TeacherAttendance.school_id == school_id,
             TeacherAttendance.attendance_date >= start_d,
             TeacherAttendance.attendance_date <= end_d,
         ),
-    ) or 0
-    teacher_approved = db.scalar(
-        select(func.count(TeacherAttendance.id)).where(
-            TeacherAttendance.school_id == school_id,
-            TeacherAttendance.attendance_date >= start_d,
-            TeacherAttendance.attendance_date <= end_d,
-            TeacherAttendance.approval_status == TeacherAttendanceApprovalStatus.APPROVED,
-        ),
-    ) or 0
+    ).one()
+    teacher_rows = int(teacher_stats[0] or 0)
+    teacher_approved = int(teacher_stats[1] or 0)
 
     student_days = db.scalar(
         select(func.count(StudentDailyAttendance.id)).where(
