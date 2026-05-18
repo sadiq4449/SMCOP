@@ -145,7 +145,9 @@ export function ReportSnapshotPanel({ snapshot }: { snapshot: Record<string, unk
         <h3 className="text-sm font-semibold text-text-primary">Quarter monitoring snapshot</h3>
         <p className="mt-1 text-xs text-text-muted">
           Figures below are read-only and refreshed from the finalized visit and attendance registers for{' '}
-          <span className="font-medium text-text-secondary">{quarter}</span>.
+          <span className="font-medium text-text-secondary">{quarter}</span>. Independent Evaluators update registers under{' '}
+          <span className="font-medium text-text-secondary">Schools → school detail → Attendance registers</span>, then use{' '}
+          <span className="font-medium text-text-secondary">Refresh metrics</span> on this report.
         </p>
       </div>
 

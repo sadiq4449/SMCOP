@@ -26,6 +26,8 @@ class ReportPatch(BaseModel):
     principal_daily_activity_notes: str | None = None
     """Set to submitted to send for DEO review (draft only)."""
     status: ReportStatusEnum | None = None
+    """Rebuild KPI + attendance aggregates from visits/registers (Super Admin / IE only)."""
+    refresh_snapshot: bool | None = None
 
 
 class ReportReviewPatch(BaseModel):

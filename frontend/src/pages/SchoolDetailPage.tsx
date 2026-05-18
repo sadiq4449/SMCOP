@@ -1,10 +1,15 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { useAuth } from '../context/AuthContext'
 import { getApiErrorMessage } from '../services/api'
-import { monthlyStudentAttendance, monthlyTeacherAttendance } from '../services/attendanceApi'
+import {
+  monthlyStudentAttendance,
+  monthlyTeacherAttendance,
+  submitStudentAttendance,
+  submitTeacherAttendance,
+} from '../services/attendanceApi'
 import { listObservations } from '../services/observationsApi'
 import {
   createEnrollment,
@@ -32,7 +37,9 @@ export function SchoolDetailPage() {
   const { user } = useAuth()
   const isSuperAdmin = user?.role === 'super_admin'
   const isGovernment = user?.role === 'government'
-  const canViewAttendanceRollups = isGovernment || isSuperAdmin
+  const isIe = user?.role === 'ie'
+  const canManageSchoolRegisters = isSuperAdmin || isIe
+  const canViewAttendanceRollups = isGovernment || isSuperAdmin || isIe
 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -47,6 +54,13 @@ export function SchoolDetailPage() {
   >([])
   const [attTotals, setAttTotals] = useState({ boys_present_sum: 0, girls_present_sum: 0, days_recorded: 0 })
   const [attBusy, setAttBusy] = useState(false)
+  const [teacherAttDate, setTeacherAttDate] = useState(`${attendanceMonthNow()}-01`)
+  const [studentAttDate, setStudentAttDate] = useState(`${attendanceMonthNow()}-01`)
+  const [studentDayBoys, setStudentDayBoys] = useState(0)
+  const [studentDayGirls, setStudentDayGirls] = useState(0)
+  const [teacherPresentById, setTeacherPresentById] = useState<Record<string, boolean>>({})
+  const [teacherDaySaving, setTeacherDaySaving] = useState(false)
+  const [studentDaySaving, setStudentDaySaving] = useState(false)
 
   const [qQuarter, setQQuarter] = useState('Q2-2026')
   const [qBoys, setQBoys] = useState(0)
@@ -90,44 +104,54 @@ export function SchoolDetailPage() {
     }
   }, [schoolId])
 
-  useEffect(() => {
+  const loadAttendanceMonth = useCallback(async () => {
     if (!schoolId || !canViewAttendanceRollups) return
-    let cancelled = false
     setAttBusy(true)
-    void Promise.all([
-      monthlyTeacherAttendance({ school_id: schoolId, month: attMonth }),
-      monthlyStudentAttendance({ school_id: schoolId, month: attMonth }),
-    ])
-      .then(([tch, stu]) => {
-        if (cancelled) return
-        setAttTeachers(tch.records)
-        setAttStudentDays(
-          stu.days.map((d) => ({
-            attendance_date: d.attendance_date,
-            boys_present: d.boys_present,
-            girls_present: d.girls_present,
-          })),
-        )
-        setAttTotals({
-          boys_present_sum: stu.totals.boys_present_sum ?? 0,
-          girls_present_sum: stu.totals.girls_present_sum ?? 0,
-          days_recorded: stu.totals.days_recorded ?? stu.days.length,
-        })
+    try {
+      const [tch, stu] = await Promise.all([
+        monthlyTeacherAttendance({ school_id: schoolId, month: attMonth }),
+        monthlyStudentAttendance({ school_id: schoolId, month: attMonth }),
+      ])
+      setAttTeachers(tch.records)
+      setAttStudentDays(
+        stu.days.map((d) => ({
+          attendance_date: d.attendance_date,
+          boys_present: d.boys_present,
+          girls_present: d.girls_present,
+        })),
+      )
+      setAttTotals({
+        boys_present_sum: stu.totals.boys_present_sum ?? 0,
+        girls_present_sum: stu.totals.girls_present_sum ?? 0,
+        days_recorded: stu.totals.days_recorded ?? stu.days.length,
       })
-      .catch(() => {
-        if (!cancelled) {
-          setAttTeachers([])
-          setAttStudentDays([])
-          setAttTotals({ boys_present_sum: 0, girls_present_sum: 0, days_recorded: 0 })
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setAttBusy(false)
-      })
-    return () => {
-      cancelled = true
+    } catch {
+      setAttTeachers([])
+      setAttStudentDays([])
+      setAttTotals({ boys_present_sum: 0, girls_present_sum: 0, days_recorded: 0 })
+    } finally {
+      setAttBusy(false)
     }
   }, [schoolId, attMonth, canViewAttendanceRollups])
+
+  useEffect(() => {
+    void loadAttendanceMonth()
+  }, [loadAttendanceMonth])
+
+  useEffect(() => {
+    setTeacherAttDate(`${attMonth}-01`)
+    setStudentAttDate(`${attMonth}-01`)
+  }, [attMonth])
+
+  useEffect(() => {
+    setTeacherPresentById((prev) => {
+      const next = { ...prev }
+      for (const t of teachers) {
+        if (!(t.id in next)) next[t.id] = false
+      }
+      return next
+    })
+  }, [teachers])
 
   const handleDeleteSchool = async () => {
     if (!schoolId || !window.confirm('Delete this school and related enrollment/teachers?')) return
@@ -175,6 +199,50 @@ export function SchoolDetailPage() {
       await loadAll()
     } catch (err) {
       alert(getApiErrorMessage(err, 'Delete failed'))
+    }
+  }
+
+  const handleSaveStudentAttendanceDay = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!schoolId || !canManageSchoolRegisters) return
+    setStudentDaySaving(true)
+    try {
+      await submitStudentAttendance({
+        school_id: schoolId,
+        date: studentAttDate,
+        boys_present: studentDayBoys,
+        girls_present: studentDayGirls,
+      })
+      await loadAttendanceMonth()
+    } catch (err) {
+      alert(getApiErrorMessage(err, 'Could not save student attendance'))
+    } finally {
+      setStudentDaySaving(false)
+    }
+  }
+
+  const handleSaveTeacherAttendanceDay = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!schoolId || !canManageSchoolRegisters) return
+    if (teachers.length === 0) {
+      alert('Add at least one teacher before recording teacher attendance.')
+      return
+    }
+    setTeacherDaySaving(true)
+    try {
+      await submitTeacherAttendance({
+        school_id: schoolId,
+        date: teacherAttDate,
+        teachers: teachers.map((t) => ({
+          teacher_id: t.id,
+          present: teacherPresentById[t.id] ?? false,
+        })),
+      })
+      await loadAttendanceMonth()
+    } catch (err) {
+      alert(getApiErrorMessage(err, 'Could not save teacher attendance'))
+    } finally {
+      setTeacherDaySaving(false)
     }
   }
 
@@ -247,6 +315,11 @@ export function SchoolDetailPage() {
               Read-only profile
             </span>
           ) : null}
+          {isIe ? (
+            <span className="rounded-full bg-secondary/15 px-3 py-1 text-xs font-medium text-secondary">
+              You can edit enrollment, teachers & attendance here
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -301,7 +374,7 @@ export function SchoolDetailPage() {
 
       <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-text-primary">Enrollment by quarter</h2>
-        {isSuperAdmin ? (
+        {canManageSchoolRegisters ? (
           <form onSubmit={handleAddEnrollment} className="mt-4 flex flex-wrap items-end gap-3 border-b border-muted-surface pb-4">
             <label className="text-sm">
               <span className="mb-1 block text-text-secondary">Quarter</span>
@@ -371,8 +444,14 @@ export function SchoolDetailPage() {
         <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm space-y-4">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-text-primary">Attendance (read-only)</h2>
-              <p className="mt-1 text-xs text-text-muted">Monthly teacher marks and student daily aggregates for this school.</p>
+              <h2 className="text-lg font-semibold text-text-primary">
+                {canManageSchoolRegisters ? 'Attendance registers' : 'Attendance summary'}
+              </h2>
+              <p className="mt-1 text-xs text-text-muted">
+                {canManageSchoolRegisters
+                  ? 'Record teacher presence and student daily boys/girls counts by date. Rows roll into quarterly report snapshots after reports refresh.'
+                  : 'Monthly teacher marks and student daily aggregates for this school.'}
+              </p>
             </div>
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-text-secondary">Month</span>
@@ -384,6 +463,93 @@ export function SchoolDetailPage() {
               />
             </label>
           </div>
+
+          {canManageSchoolRegisters ? (
+            <div className="grid gap-4 rounded-xl border border-muted-surface bg-section/40 p-4 lg:grid-cols-2">
+              <form onSubmit={(e) => void handleSaveTeacherAttendanceDay(e)} className="space-y-3">
+                <h3 className="text-sm font-semibold text-text-primary">Record teacher attendance (one date)</h3>
+                <label className="block text-xs font-medium text-text-secondary">
+                  Date
+                  <input
+                    type="date"
+                    value={teacherAttDate}
+                    onChange={(e) => setTeacherAttDate(e.target.value)}
+                    className="mt-1 block w-full max-w-xs rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                  />
+                </label>
+                <ul className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-muted-surface bg-surface p-2 text-sm">
+                  {teachers.map((t) => (
+                    <li key={t.id} className="flex items-center justify-between gap-2">
+                      <span className="text-text-primary">{t.name}</span>
+                      <label className="flex items-center gap-2 text-xs text-text-secondary">
+                        <input
+                          type="checkbox"
+                          checked={teacherPresentById[t.id] ?? false}
+                          onChange={(e) =>
+                            setTeacherPresentById((prev) => ({ ...prev, [t.id]: e.target.checked }))
+                          }
+                        />
+                        Present
+                      </label>
+                    </li>
+                  ))}
+                  {teachers.length === 0 ? (
+                    <li className="text-xs text-text-muted">Add teachers in the section below first.</li>
+                  ) : null}
+                </ul>
+                <button
+                  type="submit"
+                  disabled={teacherDaySaving || teachers.length === 0}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
+                >
+                  {teacherDaySaving ? 'Saving…' : 'Save teacher attendance'}
+                </button>
+              </form>
+
+              <form onSubmit={(e) => void handleSaveStudentAttendanceDay(e)} className="space-y-3">
+                <h3 className="text-sm font-semibold text-text-primary">Record student daily totals</h3>
+                <label className="block text-xs font-medium text-text-secondary">
+                  Date
+                  <input
+                    type="date"
+                    value={studentAttDate}
+                    onChange={(e) => setStudentAttDate(e.target.value)}
+                    className="mt-1 block w-full max-w-xs rounded-lg border border-muted-surface px-3 py-2 text-sm text-text-primary"
+                  />
+                </label>
+                <div className="flex flex-wrap gap-3">
+                  <label className="text-xs font-medium text-text-secondary">
+                    Boys present
+                    <input
+                      type="number"
+                      min={0}
+                      value={studentDayBoys}
+                      onChange={(e) => setStudentDayBoys(Number(e.target.value))}
+                      className="mt-1 block w-28 rounded-lg border border-muted-surface px-3 py-2 text-sm"
+                    />
+                  </label>
+                  <label className="text-xs font-medium text-text-secondary">
+                    Girls present
+                    <input
+                      type="number"
+                      min={0}
+                      value={studentDayGirls}
+                      onChange={(e) => setStudentDayGirls(Number(e.target.value))}
+                      className="mt-1 block w-28 rounded-lg border border-muted-surface px-3 py-2 text-sm"
+                    />
+                  </label>
+                </div>
+                <button
+                  type="submit"
+                  disabled={studentDaySaving}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-secondary disabled:opacity-50"
+                >
+                  {studentDaySaving ? 'Saving…' : 'Save student totals'}
+                </button>
+              </form>
+            </div>
+          ) : null}
+
           {attBusy ? <p className="text-sm text-text-muted">Loading attendance…</p> : null}
           <div className="grid gap-6 md:grid-cols-2">
             <div>
@@ -486,7 +652,7 @@ export function SchoolDetailPage() {
 
       <section className="rounded-2xl border border-muted-surface bg-surface p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-text-primary">Teachers</h2>
-        {isSuperAdmin ? (
+        {canManageSchoolRegisters ? (
           <form onSubmit={handleAddTeacher} className="mt-4 flex flex-wrap items-end gap-3 border-b border-muted-surface pb-4">
             <label className="text-sm">
               <span className="mb-1 block text-text-secondary">Name</span>
@@ -529,7 +695,7 @@ export function SchoolDetailPage() {
                   {t.gender} · {t.subject ?? 'Subject TBD'} · {t.status}
                 </p>
               </div>
-              {isSuperAdmin ? (
+              {canManageSchoolRegisters ? (
                 <button
                   type="button"
                   onClick={() => void handleDeleteTeacher(t.id)}

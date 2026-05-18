@@ -22,11 +22,19 @@ def can_read_attendance_for_school(db: Session, user: User, school_id: UUID) -> 
 
 
 def can_submit_student_attendance(db: Session, user: User, school_id: UUID) -> bool:
-    return user.role == UserRole.SUPER_ADMIN
+    if user.role == UserRole.SUPER_ADMIN:
+        return True
+    if user.role == UserRole.IE:
+        return user_can_access_school(db, user, school_id)
+    return False
 
 
 def can_submit_teacher_attendance_batch(db: Session, user: User, school_id: UUID) -> bool:
-    return user.role == UserRole.SUPER_ADMIN
+    if user.role == UserRole.SUPER_ADMIN:
+        return True
+    if user.role == UserRole.IE:
+        return user_can_access_school(db, user, school_id)
+    return False
 
 
 def can_submit_teacher_self_attendance(db: Session, user: User, school_id: UUID, teacher_id: UUID) -> bool:

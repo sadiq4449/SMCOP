@@ -74,6 +74,22 @@ def _require_visible_school(db: Session, user: User, school_id: UUID) -> School:
     return loaded
 
 
+def _require_super_admin_or_ie_assigned(db: Session, user: User, school_id: UUID) -> None:
+    """Roster/enrollment writes when principal roles are unused — IE covers assigned schools."""
+    if user.role == UserRole.SUPER_ADMIN:
+        return
+    if user.role == UserRole.IE and user_can_access_school(db, user, school_id):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail={
+            "success": False,
+            "message": "Only Super Admin or an Independent Evaluator assigned to this school may update roster or enrollment",
+            "errors": {"school_id": "forbidden"},
+        },
+    )
+
+
 def _get_school(db: Session, school_id: UUID) -> School | None:
     stmt = select(School).where(School.id == school_id).options(*school_load_opts)
     return db.scalars(stmt).unique().one_or_none()
@@ -356,11 +372,12 @@ def list_enrollment(
 def create_enrollment(
     school_id: UUID,
     payload: EnrollmentCreate,
-    _admin: SuperAdmin,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[EnrollmentOut]:
     if not db.scalar(select(School.id).where(School.id == school_id)):
         raise _not_found()
+    _require_super_admin_or_ie_assigned(db, current_user, school_id)
 
     quarter = payload.quarter.strip()
     exists = db.scalar(
@@ -398,7 +415,7 @@ def update_enrollment(
     school_id: UUID,
     enrollment_id: UUID,
     payload: EnrollmentUpdate,
-    _admin: SuperAdmin,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[EnrollmentOut]:
     row = db.get(SchoolEnrollment, enrollment_id)
@@ -411,6 +428,7 @@ def update_enrollment(
                 "errors": {"enrollment_id": "not found"},
             },
         )
+    _require_super_admin_or_ie_assigned(db, current_user, school_id)
 
     data = payload.model_dump(exclude_unset=True)
     for field, value in data.items():
@@ -442,11 +460,12 @@ def list_teachers(
 def create_teacher(
     school_id: UUID,
     payload: TeacherCreate,
-    _admin: SuperAdmin,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[TeacherOut]:
     if not db.scalar(select(School.id).where(School.id == school_id)):
         raise _not_found()
+    _require_super_admin_or_ie_assigned(db, current_user, school_id)
 
     teacher = Teacher(
         school_id=school_id,
@@ -466,7 +485,7 @@ def update_teacher(
     school_id: UUID,
     teacher_id: UUID,
     payload: TeacherUpdate,
-    _admin: SuperAdmin,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[TeacherOut]:
     teacher = db.get(Teacher, teacher_id)
@@ -479,6 +498,7 @@ def update_teacher(
                 "errors": {"teacher_id": "not found"},
             },
         )
+    _require_super_admin_or_ie_assigned(db, current_user, school_id)
 
     data = payload.model_dump(exclude_unset=True)
     if "name" in data and data["name"] is not None:
@@ -496,7 +516,7 @@ def update_teacher(
 def delete_teacher(
     school_id: UUID,
     teacher_id: UUID,
-    _admin: SuperAdmin,
+    current_user: AuthUser,
     db: Session = Depends(get_db),
 ) -> APIResponse[dict[str, str]]:
     teacher = db.get(Teacher, teacher_id)
@@ -509,6 +529,7 @@ def delete_teacher(
                 "errors": {"teacher_id": "not found"},
             },
         )
+    _require_super_admin_or_ie_assigned(db, current_user, school_id)
 
     db.delete(teacher)
     db.commit()

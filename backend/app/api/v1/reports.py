@@ -360,6 +360,7 @@ def patch_report(
     old_status = report.status
 
     data = payload.model_dump(exclude_unset=True)
+    refresh_requested = bool(data.pop("refresh_snapshot", False))
 
     if "status" in data and data["status"] is not None:
         new_st = ReportStatus(data["status"].value if hasattr(data["status"], "value") else data["status"])
@@ -393,6 +394,15 @@ def patch_report(
             report.principal_infrastructure_notes = data["principal_infrastructure_notes"]
         if "principal_daily_activity_notes" in data:
             report.principal_daily_activity_notes = data["principal_daily_activity_notes"]
+
+    if refresh_requested:
+        if current_user.role not in (UserRole.SUPER_ADMIN, UserRole.IE):
+            raise _forbidden()
+        if not can_read_report(db, current_user, report):
+            raise _forbidden()
+        snapshot, visit_id = build_snapshot(db, school_id=report.school_id, quarter=report.quarter)
+        report.generated_snapshot = snapshot
+        report.visit_id = visit_id
 
     db.commit()
     db.refresh(report)

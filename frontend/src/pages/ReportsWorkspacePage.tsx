@@ -288,6 +288,21 @@ export function ReportsWorkspacePage() {
     }
   }
 
+  const onRefreshSnapshot = async () => {
+    if (!selected || !user || (user.role !== 'super_admin' && user.role !== 'ie')) return
+    setSaveBusy(true)
+    setError(null)
+    try {
+      const updated = await patchReport(selected.id, { refresh_snapshot: true })
+      setSelected(updated)
+      await reload()
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e, 'Could not refresh metrics'))
+    } finally {
+      setSaveBusy(false)
+    }
+  }
+
   if (!user || !canUse) {
     return (
       <section className="rounded-2xl border border-muted-surface bg-surface p-6">
@@ -476,6 +491,16 @@ export function ReportsWorkspacePage() {
                 >
                   Compare
                 </Link>
+              ) : null}
+              {(user.role === 'super_admin' || user.role === 'ie') ? (
+                <button
+                  type="button"
+                  disabled={saveBusy}
+                  onClick={() => void onRefreshSnapshot()}
+                  className="rounded-lg border border-muted-surface px-3 py-1.5 text-sm font-medium text-text-primary hover:bg-muted-surface/40 disabled:opacity-50"
+                >
+                  Refresh metrics
+                </button>
               ) : null}
               <button
                 type="button"

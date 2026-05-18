@@ -162,7 +162,7 @@ def submit_teacher_attendance(
         )
 
     is_teacher_self = False
-    is_principal_batch = can_submit_teacher_attendance_batch(db, current_user, school_uuid)
+    is_bulk_school_submit = can_submit_teacher_attendance_batch(db, current_user, school_uuid)
 
     if is_teacher_self:
         ltid = current_user.linked_teacher_id
@@ -184,12 +184,12 @@ def submit_teacher_attendance(
                     "errors": {"teachers": "too_many"},
                 },
             )
-    elif not is_principal_batch and current_user.role != UserRole.SUPER_ADMIN:
+    elif not is_bulk_school_submit and current_user.role != UserRole.SUPER_ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "success": False,
-                "message": "Only Principals or Super Admin may submit bulk teacher attendance",
+                "message": "Only Super Admin or an Independent Evaluator assigned to this school may submit teacher attendance",
                 "errors": {"role": "forbidden"},
             },
         )
@@ -197,7 +197,8 @@ def submit_teacher_attendance(
     out_rows: list[TeacherAttendance] = []
     now = datetime.now(timezone.utc)
 
-    auto_approve = current_user.role == UserRole.SUPER_ADMIN
+    # IE acts as sole registrar when principal/teacher roles are unused — approve so quarterly snapshots count rows.
+    auto_approve = current_user.role in (UserRole.SUPER_ADMIN, UserRole.IE)
 
     for line in payload.teachers:
         if is_teacher_self:
