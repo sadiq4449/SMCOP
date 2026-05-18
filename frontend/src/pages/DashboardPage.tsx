@@ -43,6 +43,28 @@ function meanAggregateScore(rows: Record<string, unknown>[] | null): number | nu
   return nums.reduce((a, b) => a + b, 0) / nums.length
 }
 
+/** Title-case segments for display without changing stored geography names. */
+function formatGeographicDisplayName(raw: string): string {
+  const s = raw.trim()
+  if (!s) return ''
+  return s
+    .split(/(\s+|-)/)
+    .map((part) => {
+      if (/^\s+$/.test(part)) return part
+      if (part === '-') return part
+      if (!part) return part
+      const lower = part.toLocaleLowerCase()
+      return lower.charAt(0).toLocaleUpperCase() + lower.slice(1)
+    })
+    .join('')
+}
+
+function formatAvgAggregateCell(v: unknown): string {
+  const n = Number(v)
+  if (!Number.isFinite(n)) return '—'
+  return n.toFixed(2)
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const [quarter, setQuarter] = useState(quarterNow)
@@ -352,7 +374,7 @@ export function DashboardPage() {
     totals != null
       ? `National view for ${quarter.trim() || 'the selected quarter'}: ${String(totals.schools ?? '—')} schools in scope, ${String(totals.visits_finalized ?? '—')} finalized visits, and ${String(totals.visits_draft ?? '—')} drafts still in flight.`
       : districtDetail != null
-        ? `District command view for ${String(districtDetail.district_name ?? 'selected geography')} — monitor drafts, report reviews, and facility signals before they escalate.`
+        ? `District command view for ${formatGeographicDisplayName(String(districtDetail.district_name ?? 'selected geography'))} — monitor drafts, report reviews, and facility signals before they escalate.`
         : schoolDash
           ? `School operational picture for ${String(main?.school_name ?? 'your assigned school')} — enrollment momentum, attendance compliance, and visit quality in one place.`
           : `Quarter-scoped intelligence for ${roleLabels[user.role]}. Metrics align with finalized visits and attendance registers.`
@@ -391,7 +413,7 @@ export function DashboardPage() {
                   <option value="">All / select…</option>
                   {districts.map((d) => (
                     <option key={d.id} value={d.id}>
-                      {d.name}
+                      {formatGeographicDisplayName(d.name)}
                     </option>
                   ))}
                 </select>
@@ -545,20 +567,37 @@ export function DashboardPage() {
               <tbody className="divide-y divide-slate-100">
                 {districtRows.map((r) => {
                   const sc = kpiAggregateToPercent(r.avg_aggregate_score as number | null)
+                  const districtId = String(r.district_id ?? '')
+                  const rawCode = r.district_code != null ? String(r.district_code).trim() : ''
+                  const codeLine = rawCode ? rawCode.toUpperCase() : ''
+                  const schools = Number(r.school_count)
+                  const visits = Number(r.visits)
+                  const inactive = Number.isFinite(schools) && Number.isFinite(visits) && schools === 0 && visits === 0
+                  const metaBits: string[] = []
+                  if (codeLine) metaBits.push(codeLine)
+                  if (inactive) metaBits.push('No activity this quarter')
+                  const displayName = formatGeographicDisplayName(String(r.district_name ?? ''))
+                  const numTone = inactive ? 'tabular-nums text-text-muted' : 'tabular-nums text-text-secondary'
                   return (
-                    <tr key={String(r.district_id)} className="bg-white/40 transition-colors hover:bg-slate-50/80">
-                      <td className="px-8 py-4">
-                        <div className="font-medium text-text-primary">{String(r.district_name ?? '')}</div>
-                        <div className="mt-0.5 font-mono text-[11px] text-text-muted">{String(r.district_id ?? '')}</div>
+                    <tr
+                      key={districtId}
+                      title={districtId ? `Record ID: ${districtId}` : undefined}
+                      className="bg-white/40 transition-colors hover:bg-slate-50/80"
+                    >
+                      <td className="px-8 py-4 align-top">
+                        <div className="font-medium text-text-primary">{displayName}</div>
+                        {metaBits.length > 0 ? (
+                          <div className="mt-1 text-[11px] leading-snug text-text-muted">{metaBits.join(' · ')}</div>
+                        ) : null}
                       </td>
-                      <td className="px-4 py-4 tabular-nums text-text-secondary">{String(r.school_count ?? '')}</td>
-                      <td className="px-4 py-4 tabular-nums text-text-secondary">{String(r.visits ?? '')}</td>
-                      <td className="px-4 py-4 tabular-nums text-text-secondary">{String(r.visits_finalized ?? '')}</td>
-                      <td className="px-8 py-4">
-                        <div className="flex items-center gap-3">
-                          <span className="tabular-nums text-text-secondary">{String(r.avg_aggregate_score ?? '—')}</span>
+                      <td className={`px-4 py-4 align-top ${numTone}`}>{String(r.school_count ?? '0')}</td>
+                      <td className={`px-4 py-4 align-top ${numTone}`}>{String(r.visits ?? '0')}</td>
+                      <td className={`px-4 py-4 align-top ${numTone}`}>{String(r.visits_finalized ?? '0')}</td>
+                      <td className="px-8 py-4 align-top">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="tabular-nums text-text-secondary">{formatAvgAggregateCell(r.avg_aggregate_score)}</span>
                           {sc != null ? (
-                            <div className="h-1.5 w-28 overflow-hidden rounded-full bg-slate-200">
+                            <div className="h-1.5 min-w-[7rem] flex-1 overflow-hidden rounded-full bg-slate-200 sm:w-28 sm:flex-none">
                               <div className="h-full rounded-full bg-emerald-600/55" style={{ width: `${sc}%` }} />
                             </div>
                           ) : null}
@@ -581,14 +620,23 @@ export function DashboardPage() {
         <section className="space-y-8">
           <PremiumPanel className="animate-premium-in">
             <PremiumEyebrow>District command</PremiumEyebrow>
-            <h2 className="mt-2 text-2xl font-semibold tracking-tight text-text-primary">
-              {String(districtDetail.district_name ?? '')}
+            <h2
+              className="mt-2 text-2xl font-semibold tracking-tight text-text-primary"
+              title={
+                districtDetail.district_id ? `Record ID: ${String(districtDetail.district_id)}` : undefined
+              }
+            >
+              {formatGeographicDisplayName(String(districtDetail.district_name ?? ''))}
             </h2>
-            <p className="mt-1 font-mono text-xs text-text-muted">{String(districtDetail.district_id ?? '')}</p>
+            {districtDetail.district_code != null && String(districtDetail.district_code).trim() !== '' ? (
+              <p className="mt-2 text-[13px] font-semibold uppercase tracking-wide text-text-muted">
+                {String(districtDetail.district_code).trim().toUpperCase()}
+              </p>
+            ) : null}
           </PremiumPanel>
 
           <DashboardGaugeBoard
-            location={String(districtDetail.district_name ?? 'District')}
+            location={formatGeographicDisplayName(String(districtDetail.district_name ?? 'District'))}
             contextLine={`${roleLabels[user.role]} · ${String(districtDetail.quarter ?? (quarter.trim() || quarterNow()))}`}
             cards={districtGaugeCards}
             animateKey={gaugeAnim > 0 ? String(gaugeAnim) : ''}

@@ -147,6 +147,7 @@ def _district_breakdown_page(db: Session, *, quarter: str, skip: int, limit: int
         out.append(
             {
                 "district_id": str(d.id),
+                "district_code": d.code,
                 "district_name": d.name,
                 "school_count": int(school_cnt),
                 "visits": int(visit_cnt),
@@ -260,6 +261,7 @@ def district_operational_payload(
     return {
         "quarter": q,
         "district_id": str(district_id),
+        "district_code": d.code,
         "district_name": d.name,
         "pending_draft_visits": int(pending_visits),
         "pending_report_reviews": int(pending_reports),
