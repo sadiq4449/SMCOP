@@ -232,7 +232,7 @@ export function UserFormPage() {
         <h1 className="mt-1 text-2xl font-semibold text-text-primary">{isEdit ? 'Edit user' : 'New user'}</h1>
         <p className="mt-1 text-sm text-text-muted">
           SMCOP roles: Super Admin, PPP Node (Government), Independent Evaluator (school assignments), Partner organization
-          (read-only org scope).
+          (oversight on schools tied to their org).
         </p>
       </header>
 

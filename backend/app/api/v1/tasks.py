@@ -80,7 +80,7 @@ def create_task(
     if not assignee_valid_for_task(db, school_uuid, assignee):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail={"success": False, "message": "Assignee must be principal/teacher for this school", "errors": {"assignee_user_id": "invalid"}},
+            detail={"success": False, "message": "Assignee must be an Independent Evaluator assigned to this school", "errors": {"assignee_user_id": "invalid"}},
         )
     t = WorkTask(
         school_id=school_uuid,

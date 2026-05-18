@@ -221,7 +221,7 @@ def submit_teacher_attendance(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={
                     "success": False,
-                    "message": "Approved attendance cannot be changed by teachers — contact your principal",
+                    "message": "Approved attendance is locked — contact a Super Admin to revise",
                     "errors": {"duplicate": "locked"},
                 },
             )
@@ -528,18 +528,8 @@ def export_attendance_csv(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "success": False,
-                "message": "Export is limited to Principals and Super Admin",
+                "message": "Your role cannot export attendance",
                 "errors": {"role": "forbidden"},
-            },
-        )
-
-    if current_user.role != UserRole.SUPER_ADMIN or not can_review_teacher_attendance(db, current_user, school_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "success": False,
-                "message": "You cannot export attendance for this school",
-                "errors": {"school_id": "forbidden"},
             },
         )
 
@@ -625,18 +615,8 @@ def export_attendance_xlsx(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={
                 "success": False,
-                "message": "Export is limited to Principals and Super Admin",
+                "message": "Your role cannot export attendance",
                 "errors": {"role": "forbidden"},
-            },
-        )
-
-    if current_user.role != UserRole.SUPER_ADMIN or not can_review_teacher_attendance(db, current_user, school_id):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "success": False,
-                "message": "You cannot export attendance for this school",
-                "errors": {"school_id": "forbidden"},
             },
         )
 

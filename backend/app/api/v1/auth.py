@@ -1,3 +1,6 @@
+import hashlib
+import secrets
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
@@ -188,7 +191,7 @@ def forgot_password(
     if user is not None and user.status == UserStatus.ACTIVE:
         raw = secrets.token_urlsafe(32)
         token_hash = hashlib.sha256(raw.encode()).hexdigest()
-        expires = datetime.now(UTC) + timedelta(hours=1)
+        expires = datetime.now(timezone.utc) + timedelta(hours=1)
         row = PasswordResetToken(user_id=user.id, token_hash=token_hash, expires_at=expires)
         db.add(row)
         db.commit()
@@ -215,7 +218,7 @@ def reset_password_endpoint(
         select(PasswordResetToken).where(
             PasswordResetToken.token_hash == token_hash,
             PasswordResetToken.used_at.is_(None),
-            PasswordResetToken.expires_at > datetime.now(UTC),
+            PasswordResetToken.expires_at > datetime.now(timezone.utc),
         ),
     )
     if row is None:
@@ -234,7 +237,7 @@ def reset_password_endpoint(
             detail={"success": False, "message": "Account unavailable", "errors": {"user": "inactive"}},
         )
     user.password_hash = hash_password(payload.password)
-    row.used_at = datetime.now(UTC)
+    row.used_at = datetime.now(timezone.utc)
     db.commit()
     log_activity(db, action="auth.password_reset_complete", target=str(user.id), user_id=user.id)
     return APIResponse(success=True, message="Password updated. You can sign in with the new password.", data={"status": "ok"})

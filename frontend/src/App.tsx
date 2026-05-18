@@ -65,7 +65,8 @@ function App() {
               <Route path="/dashboard/monitoring/:visitId" element={<VisitFormPage />} />
               <Route path="/dashboard/monitoring" element={<MonitoringVisitsPage />} />
               <Route path="/dashboard/visit-calendar" element={<VisitCalendarPage />} />
-              <Route path="/dashboard/visits" element={<MonitoringVisitsPage />} />
+              <Route path="/dashboard/visits" element={<Navigate to="/dashboard/monitoring" replace />} />
+              <Route path="/dashboard/approvals" element={<Navigate to="/dashboard/reports" replace />} />
               <Route path="/dashboard/assigned-schools" element={<AssignedSchoolsPage />} />
               <Route path="/dashboard/issues" element={<IssuesPage />} />
               <Route path="/dashboard/observations" element={<ObservationsPage />} />

@@ -601,7 +601,7 @@ export function DashboardPage() {
               <PremiumMetricCard
                 label="Pending draft visits"
                 value={String(districtDetail.pending_draft_visits ?? 0)}
-                hint="Enumerator workload"
+                hint="IE workload"
                 tone="warning"
                 iconLetter="P"
                 progress={null}
@@ -609,7 +609,7 @@ export function DashboardPage() {
               <PremiumMetricCard
                 label="Reports awaiting review"
                 value={String(districtDetail.pending_report_reviews ?? 0)}
-                hint="DEO / approvals pipeline"
+                hint="Super Admin approvals pipeline"
                 tone="warning"
                 iconLetter="R"
                 progress={null}

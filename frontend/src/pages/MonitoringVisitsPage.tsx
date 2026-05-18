@@ -103,7 +103,12 @@ export function MonitoringVisitsPage() {
               {items.map((v) => (
                 <tr key={v.id} className="hover:bg-section/80">
                   <td className="px-4 py-3 font-mono text-text-primary">{v.quarter}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-text-muted">{v.school_id.slice(0, 8)}…</td>
+                  <td className="px-4 py-3 text-text-secondary">
+                    {v.school_name ?? (
+                      <span className="font-mono text-xs text-text-muted">{v.school_id.slice(0, 8)}…</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-text-secondary">{v.scheduled_date ?? '—'}</td>
                   <td className="px-4 py-3 text-text-secondary">{v.visit_date ?? '—'}</td>
                   <td className="px-4 py-3 text-text-secondary">
                     {v.aggregate_score != null ? `${v.aggregate_score}%` : '—'}

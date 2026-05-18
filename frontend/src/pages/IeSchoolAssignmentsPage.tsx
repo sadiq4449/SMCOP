@@ -46,7 +46,7 @@ export function IeSchoolAssignmentsPage() {
     setLoadingList(true)
     setError(null)
     try {
-      const res = await listUsers({ role: 'ie', limit: 200 })
+      const res = await listUsers({ role: 'ie', limit: 100 })
       setIeUsers(res.items)
       setSelectedIeId((prev) => {
         if (prev && res.items.some((u) => u.id === prev)) return prev
@@ -82,8 +82,9 @@ export function IeSchoolAssignmentsPage() {
     if (user?.role !== 'super_admin' || !selectedIeId) return
     let cancelled = false
     setSchoolPickerLoading(true)
+    setError(null)
     void getSchools({
-      limit: 120,
+      limit: 100,
       ...(debouncedQ.length >= 1 ? { q: debouncedQ } : {}),
     })
       .then((res) => {

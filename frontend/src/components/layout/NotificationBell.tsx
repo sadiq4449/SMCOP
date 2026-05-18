@@ -18,19 +18,12 @@ function isReadRow(n: NotificationRow): boolean {
 function routeForNotification(n: NotificationRow): string | null {
   const ref = (n.ref_id ?? '').trim()
   const rt = (n.ref_type ?? '').trim()
-  const kind = (n.kind ?? '').trim()
 
   if (rt === 'visit' && ref) {
     return `/dashboard/monitoring/${encodeURIComponent(ref)}`
   }
-  if (rt === 'report' && kind === 'report_submitted') {
-    return '/dashboard/approvals'
-  }
-  if (rt === 'report' && kind === 'report_approved') {
+  if (rt === 'report') {
     return '/dashboard/reports'
-  }
-  if (rt === 'report' && ref) {
-    return '/dashboard/approvals'
   }
   if (rt === 'issue') {
     return '/dashboard/issues'

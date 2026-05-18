@@ -46,7 +46,12 @@ def can_review_teacher_attendance(db: Session, user: User, school_id: UUID) -> b
 
 
 def can_export_attendance(user: User) -> bool:
-    return user.role in (UserRole.SUPER_ADMIN, UserRole.GOVERNMENT, UserRole.PARTNER)
+    return user.role in (
+        UserRole.SUPER_ADMIN,
+        UserRole.GOVERNMENT,
+        UserRole.PARTNER,
+        UserRole.IE,
+    )
 
 
 def teacher_belongs_to_school(db: Session, school_id: UUID, teacher_id: UUID) -> bool:
